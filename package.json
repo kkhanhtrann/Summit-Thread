@@ -18,7 +18,7 @@
     "contracts:generate": "npm --prefix web run contracts:generate",
     "typecheck": "npm run contracts:generate && npm --prefix backend run typecheck && npm --prefix web run typecheck",
     "test:boundaries": "node --test client-boundaries.test.mjs",
-    "test": "npm run test:boundaries && npm --prefix backend test && npm --prefix web test",
+    "test": "node --test scripts/dev.test.mjs && npm run test:boundaries && npm --prefix backend test && npm --prefix web test",
     "build": "npm run contracts:generate && npm --prefix backend run build && npm --prefix web run build",
     "check": "npm run typecheck && npm test && npm run build"
   }
