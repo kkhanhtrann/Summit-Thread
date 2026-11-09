@@ -8,6 +8,9 @@ import { shutdownTelemetry } from './platform/telemetry/instrumentation';
 import { SessionEventHub } from './features/sessions/application/sessionEventHub';
 import { RoomService, RecordingService } from './features/sessions/public';
 import { PrismaRoomRepository } from './features/sessions/persistence/prismaRoomRepository';
+import { PrismaSessionRepository } from './features/sessions/persistence/prismaSession.repository';
+import { TopicAnalysisWorker } from './features/sessions/application/topicAnalysisWorker';
+import { createGeminiTopicAnalyzer } from './platform/ai/geminiTopicAnalyzer';
 import {
   LocalRecordingAssetStore,
   readRecordingDuration
@@ -27,6 +30,14 @@ const search = new Client({
 const repository = new PrismaRoomRepository(prisma);
 const events = new SessionEventHub();
 const sessions = new RoomService({ repository, events });
+// Group released speech into topics only when a backend AI credential is available
+const topicWorker = env.GEMINI_API_KEY?.trim()
+  ? new TopicAnalysisWorker(
+      new PrismaSessionRepository(prisma),
+      createGeminiTopicAnalyzer(),
+      events
+    )
+  : { start: () => undefined, wake: async () => undefined, stop: () => undefined };
 const recordings = new RecordingService({
   repository,
   events,
@@ -50,6 +61,7 @@ async function stop() {
   if (stopping) return;
   stopping = true;
   clearInterval(playbackWatchdog);
+  topicWorker.stop();
   await gateway?.close();
   server?.close();
   server?.closeAllConnections();
@@ -60,6 +72,8 @@ async function stop() {
 async function start() {
   await prisma.$connect();
   await sessions.initialize();
+  // Resume pending intervals and paused tails left by the previous process
+  topicWorker.start();
   const app = createApp(
     async () => {
       await Promise.all([prisma.$queryRaw`SELECT 1`, search.ping()]);
@@ -96,8 +110,8 @@ async function start() {
           }
         : null;
     },
-    // Leave topic processing to ST-03 while preserving its flushed-caption handoff
-    refreshTopics: () => undefined
+    // Freeze the requested topic range only after flushed caption writes settle
+    refreshTopics: (id) => void topicWorker.wake(true, id)
   });
   playbackWatchdog = setInterval(() => {
     if (checkingPlayback) return;
