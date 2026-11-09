@@ -39,7 +39,8 @@ pod-local volume, a readiness check backed by PostgreSQL and Elasticsearch, and 
 liveness check that does not require either dependency. A startup probe allows up
 to five minutes for migrations and process startup before liveness checks can
 restart the container. CI builds the actual container and verifies nginx, writable
-recording storage, FFmpeg clipping, and both system and bundled FFprobe binaries.
+recording storage, FFmpeg clipping, and both system and bundled FFprobe binaries
+for images built after this fix. The recovered image predates that validation.
 
 The workflow uses the repository's short-lived `GITHUB_TOKEN` by default. On its
 deployment PR, select **Approve workflows to run** if GitHub holds CI for approval,
@@ -93,6 +94,13 @@ retry successfully published `9a9322535b38425c0db5eab8ac63c856be3db317`. The app
 then rolled onto that image, and the baseline pin was advanced to match it.
 The old workflow subsequently stopped at its mandatory `DEPLOY_PR_TOKEN` check;
 this branch removes that requirement. AI provider calls were not verified.
+
+The recovered `9a93225` image does **not** contain system FFmpeg/FFprobe. Visual
+clipping is unavailable on that image even though application readiness passes.
+After this fix merges, wait for its new image to publish, then review and merge
+the generated deployment-pin PR to release the media tools. The baseline pin
+deliberately names an existing, verified image; do not pin an unpublished SHA or
+treat merging the Dockerfile change alone as a completed media-tool rollout.
 
 Recordings use an ephemeral pod volume and are not a durable production media
 store. This deployment is a hackathon environment, not an authenticated
