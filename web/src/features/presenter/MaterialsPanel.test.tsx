@@ -70,6 +70,19 @@ describe('MaterialsPanel', () => {
     expect(screen.getByText('Fixture slides').closest('li')).toHaveTextContent('Ready · 4 passages from 4 pages');
   });
 
+  it('sends a .pdf file with a blank browser type as application/pdf', async () => {
+    api.uploadPdf.mockResolvedValue(material({ id: 'pdf', kind: 'pdf', title: 'Fixture slides', pageCount: 1, passageCount: 1 }));
+    const user = userEvent.setup({ applyAccept: false });
+    render(<MaterialsPanel sessionId="AB12CD34" />);
+
+    await user.upload(await screen.findByLabelText('PDF slides or handout'), new File(['%PDF-fixture'], 'Fixture slides.pdf', { type: '' }));
+
+    await waitFor(() => expect(api.uploadPdf).toHaveBeenCalledOnce());
+    const sent = api.uploadPdf.mock.calls[0]![2] as Blob;
+    expect(sent.type).toBe('application/pdf');
+    expect(sent.size).toBe('%PDF-fixture'.length);
+  });
+
   it('rejects a non-PDF file before uploading', async () => {
     const user = userEvent.setup({ applyAccept: false });
     render(<MaterialsPanel sessionId="AB12CD34" />);

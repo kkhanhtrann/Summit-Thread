@@ -61,7 +61,8 @@ describe('PostgreSQL presenter materials', () => {
     const done = await materials.completeMaterial('C0000001', 'm-ready', { pageCount: 3, passages });
 
     expect(done).toMatchObject({ status: 'ready', pageCount: 3, passageCount: 2 });
-    expect(await materials.getReadyPassages('C0000001')).toEqual([
+    expect(await materials.getReadyPassageIds('C0000001')).toEqual(['m-ready:0', 'm-ready:1']);
+    expect(await materials.getReadyPassagesByIds('C0000001', ['m-ready:0', 'm-ready:1'])).toEqual([
       { id: 'm-ready:0', materialId: 'm-ready', materialTitle: 'Fixture slides', pageNumber: 1, text: passages[0]!.text },
       { id: 'm-ready:1', materialId: 'm-ready', materialTitle: 'Fixture slides', pageNumber: 2, text: passages[1]!.text }
     ]);
@@ -92,7 +93,7 @@ describe('PostgreSQL presenter materials', () => {
     const done = await materials.completeMaterial('C0000003', 'm-empty', { pageCount: 2, passages: [] });
 
     expect(done).toMatchObject({ status: 'empty', passageCount: 0, pageCount: 2 });
-    expect(await materials.getReadyPassages('C0000003')).toEqual([]);
+    expect(await materials.getReadyPassageIds('C0000003')).toEqual([]);
   });
 
   it('deletes passages and pending jobs, then queues removal of search documents', async () => {
@@ -117,7 +118,9 @@ describe('PostgreSQL presenter materials', () => {
     await materials.beginMaterial('C0000006', { id: 'm-b', kind: 'text', title: 'Fixture B' });
     await materials.completeMaterial('C0000006', 'm-b', { pageCount: null, passages: [passages[1]!] });
 
-    expect((await materials.getReadyPassages('C0000005')).map((p) => p.id)).toEqual(['m-a:0']);
+    expect(await materials.getReadyPassageIds('C0000005')).toEqual(['m-a:0']);
+    // Ignore another room's passage IDs even when they are requested directly
+    expect((await materials.getReadyPassagesByIds('C0000005', ['m-a:0', 'm-b:0'])).map((p) => p.id)).toEqual(['m-a:0']);
     await expect(materials.deleteMaterial('C0000005', 'm-b')).rejects.toBeInstanceOf(MaterialNotFoundError);
     await expect(materials.completeMaterial('C0000005', 'm-b', { pageCount: null, passages })).rejects.toBeInstanceOf(MaterialNotFoundError);
   });

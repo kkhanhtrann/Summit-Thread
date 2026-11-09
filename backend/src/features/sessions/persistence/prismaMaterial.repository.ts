@@ -112,10 +112,21 @@ export class PrismaMaterialRepository implements MaterialRepository {
     await this.database.talkMaterial.updateMany({ where: { status: 'processing' }, data: { status: 'failed' } });
   }
 
-  // Read every passage of the room's ready materials for retrieval allowlists
-  async getReadyPassages(sessionId: string): Promise<MaterialPassageView[]> {
+  // Read only the IDs of the room's ready passages to build retrieval allowlists
+  async getReadyPassageIds(sessionId: string): Promise<string[]> {
     const passages = await this.database.materialPassage.findMany({
       where: { sessionId, material: { status: 'ready', sessionId } },
+      orderBy: [{ materialId: 'asc' }, { ordinal: 'asc' }],
+      select: { id: true }
+    });
+    return passages.map((passage) => passage.id);
+  }
+
+  // Load canonical text for selected passages, keeping only ready passages of this room
+  async getReadyPassagesByIds(sessionId: string, ids: string[]): Promise<MaterialPassageView[]> {
+    if (!ids.length) return [];
+    const passages = await this.database.materialPassage.findMany({
+      where: { sessionId, id: { in: ids }, material: { status: 'ready', sessionId } },
       orderBy: [{ materialId: 'asc' }, { ordinal: 'asc' }],
       include: { material: { select: { title: true } } }
     });

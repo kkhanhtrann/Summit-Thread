@@ -42,8 +42,15 @@ export async function extractPdfText(
     if (document.numPages > maxPages) throw new MaterialTooLargeError();
     const pages: ExtractedPdf['pages'] = [];
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const content = await page.getTextContent();
+      let page;
+      let content;
+      try {
+        page = await document.getPage(pageNumber);
+        content = await page.getTextContent();
+      } catch {
+        // Map malformed pages to the unreadable error without echoing parser details
+        throw new MaterialUnreadableError();
+      }
       let text = '';
       for (const item of content.items) {
         if (!('str' in item)) continue;

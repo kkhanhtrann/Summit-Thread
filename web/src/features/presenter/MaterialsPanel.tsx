@@ -94,7 +94,9 @@ export function MaterialsPanel({ sessionId }: { sessionId: string }) {
     setBusy(true);
     setProgress(0);
     try {
-      accept(await uploadPdfMaterial(sessionId, titleFromFile(file.name), file, setProgress, controller.signal), 'uploaded');
+      // Send a PDF content type even when the browser reports a blank or generic file type
+      const pdf = file.type === 'application/pdf' ? file : new Blob([file], { type: 'application/pdf' });
+      accept(await uploadPdfMaterial(sessionId, titleFromFile(file.name), pdf, setProgress, controller.signal), 'uploaded');
     } catch (failure) {
       if (controller.signal.aborted) return;
       setError(failure instanceof Error ? failure.message : 'The PDF couldn’t be uploaded.');

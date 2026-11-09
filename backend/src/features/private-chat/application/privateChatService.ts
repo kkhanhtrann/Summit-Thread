@@ -26,8 +26,9 @@ export interface PrivateChatDependencies {
   };
   // Retrieve presenter material when material intake is composed
   materials?: {
-    getReadyPassages(sessionId: string): Promise<MaterialPassage[]>;
-    searchPassages(sessionId: string, query: string, allowedPassageIds: string[]): Promise<MaterialPassage[]>;
+    getReadyPassageIds(sessionId: string): Promise<string[]>;
+    getReadyPassagesByIds(sessionId: string, ids: string[]): Promise<MaterialPassage[]>;
+    searchPassages(sessionId: string, query: string, allowedPassageIds: string[]): Promise<Array<{ id: string }>>;
   };
   generateAnswer?: AnswerGenerator;
 }
@@ -178,21 +179,25 @@ export class PrivateChatService {
     if (!materials) return 0;
     let added = 0;
     try {
-      const ready = await materials.getReadyPassages(sessionId);
-      if (!ready.length) return 0;
-      // Intersect material search results with passages reloaded from PostgreSQL
-      const readyById = new Map(ready.map((passage) => [passage.id, passage]));
-      const allowedPassageIds = [...readyById.keys()];
+      // Build the allowlist from IDs only; load text just for the passages kept
+      const allowedPassageIds = await materials.getReadyPassageIds(sessionId);
+      if (!allowedPassageIds.length) return 0;
+      const allowed = new Set(allowedPassageIds);
       for (const query of queries) {
         const hits = await materials.searchPassages(sessionId, query, allowedPassageIds);
-        for (const hit of hits) {
-          const committed = readyById.get(hit.id);
-          if (committed && !sources.has(hit.id)) {
-            sources.set(hit.id, materialSource(committed));
-            added += 1;
-          }
-          if (added === MAX_MATERIAL_SOURCES) return added;
+        const wanted = [...new Set(hits.map((hit) => hit.id))]
+          .filter((id) => allowed.has(id) && !sources.has(id))
+          .slice(0, MAX_MATERIAL_SOURCES - added);
+        if (!wanted.length) continue;
+        // Use canonical PostgreSQL text rather than the search index copy
+        const committed = new Map((await materials.getReadyPassagesByIds(sessionId, wanted)).map((passage) => [passage.id, passage]));
+        for (const id of wanted) {
+          const passage = committed.get(id);
+          if (!passage) continue;
+          sources.set(id, materialSource(passage));
+          added += 1;
         }
+        if (added === MAX_MATERIAL_SOURCES) return added;
       }
     } catch {
       // Keep answering from speech when material retrieval is unavailable

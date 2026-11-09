@@ -49,7 +49,8 @@ const privateChat = new PrivateChatService({
     }
   },
   materials: {
-    getReadyPassages: id => materialRepository.getReadyPassages(id),
+    getReadyPassageIds: id => materialRepository.getReadyPassageIds(id),
+    getReadyPassagesByIds: (id, ids) => materialRepository.getReadyPassagesByIds(id, ids),
     searchPassages: (id, query, allowedPassageIds) => materialSearch.findPassages(id, query, allowedPassageIds, 5)
   },
   generateAnswer: env.GEMINI_API_KEY ? createGeminiAnswerGenerator() : undefined
@@ -66,7 +67,8 @@ const topicWorker = env.GEMINI_API_KEY?.trim()
       2_000,
       // Supply relevant presenter material as vocabulary, never as topic evidence
       createMaterialBackgroundProvider({
-        getReadyPassages: id => materialRepository.getReadyPassages(id),
+        getReadyPassageIds: id => materialRepository.getReadyPassageIds(id),
+        getReadyPassagesByIds: (id, ids) => materialRepository.getReadyPassagesByIds(id, ids),
         searchPassages: (id, query, allowedPassageIds, size) => materialSearch.findPassages(id, query, allowedPassageIds, size)
       })
     )

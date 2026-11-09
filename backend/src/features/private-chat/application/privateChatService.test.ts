@@ -133,16 +133,28 @@ describe('PrivateChatService presenter materials', () => {
       if (options.materialError) throw new Error('PRIVATE_SEARCH_MARKER');
       return options.materialHits ?? [];
     });
+    const getReadyPassageIds = vi.fn(async () => (options.ready ?? []).map((passage) => passage.id));
+    const getReadyPassagesByIds = vi.fn(async (_room: string, ids: string[]) => (options.ready ?? []).filter((passage) => ids.includes(passage.id)));
     const chat = new PrivateChatService({
       sessions: {
         getReleasedCaptions: vi.fn().mockResolvedValue(options.captions ?? []),
         searchReleasedCaptions: vi.fn().mockResolvedValue(options.captions ?? [])
       },
-      materials: { getReadyPassages: vi.fn().mockResolvedValue(options.ready ?? []), searchPassages },
+      materials: { getReadyPassageIds, getReadyPassagesByIds, searchPassages },
       generateAnswer
     });
-    return { chat, generateAnswer, searchPassages };
+    return { chat, generateAnswer, searchPassages, getReadyPassagesByIds };
   }
+
+  it('loads passage text only for the search hits it keeps, not the whole room', async () => {
+    const others = Array.from({ length: 50 }, (_, index) => ({ ...slide, id: `m-1:${index + 10}` }));
+    const { chat, getReadyPassagesByIds } = service({ ready: [slide, ...others], materialHits: [slide], citationIds: [slide.id] });
+
+    await chat.ask('AB12CD34', { question: 'What do reflective roofs do?', history: [] });
+
+    expect(getReadyPassagesByIds).toHaveBeenCalledOnce();
+    expect(getReadyPassagesByIds).toHaveBeenCalledWith('AB12CD34', [slide.id]);
+  });
 
   it('answers from material alone with a typed material citation and a page label', async () => {
     const { chat, generateAnswer } = service({ ready: [slide], materialHits: [slide], citationIds: [slide.id] });

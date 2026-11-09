@@ -26,7 +26,8 @@ function setup(extractPdf = vi.fn()) {
     listMaterials: vi.fn(async () => []),
     deleteMaterial: vi.fn(async () => undefined),
     failInterruptedMaterials: vi.fn(async () => undefined),
-    getReadyPassages: vi.fn(async () => [])
+    getReadyPassageIds: vi.fn(async () => []),
+    getReadyPassagesByIds: vi.fn(async () => [])
   };
   const indexer = { wake: vi.fn() };
   return { service: new MaterialService({ repository, extractPdf, indexer }), repository, indexer, completed, failed };

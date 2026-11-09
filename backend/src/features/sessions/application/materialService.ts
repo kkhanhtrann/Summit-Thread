@@ -23,7 +23,8 @@ export interface MaterialRepository {
   listMaterials(sessionId: string): Promise<MaterialView[]>;
   deleteMaterial(sessionId: string, materialId: string): Promise<void>;
   failInterruptedMaterials(): Promise<void>;
-  getReadyPassages(sessionId: string): Promise<MaterialPassageView[]>;
+  getReadyPassageIds(sessionId: string): Promise<string[]>;
+  getReadyPassagesByIds(sessionId: string, ids: string[]): Promise<MaterialPassageView[]>;
 }
 
 // Describe page text read from an uploaded PDF
