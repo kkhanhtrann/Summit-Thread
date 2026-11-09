@@ -53,6 +53,25 @@ describe.skipIf(!enabled)('real PostgreSQL and Elasticsearch boundary', () => {
    const results = await search.findReleasedCaptions(room,'shade',[caption]);
    expect(results.map(c => c.id)).toEqual([caption]);
  });
+ it('retrieves current topic context and replaces older indexed topic text', async () => {
+   const threadId = `${room}-topic`;
+   const occurrenceId = `${room}-visit`;
+   await prisma.$transaction(async tx => {
+     await tx.topicThread.create({ data: { id: threadId, sessionId: room, title: 'Canopy equity', summary: 'SYNTHETIC topic context' } });
+     await tx.topicOccurrence.create({ data: { id: occurrenceId, sessionId: room, threadId, ordinal: 0, summary: 'SYNTHETIC visit', evidenceCaptionIds: [caption], startedSequence: 0, startedAtMs: 12000 } });
+     await tx.captionSegment.update({ where: { id: caption }, data: { topicOccurrenceId: occurrenceId } });
+     await tx.searchIndexJob.create({ data: { id: `topic:${caption}`, sessionId: room, captionId: caption, operation: 'index_caption' } });
+   });
+   await new SessionIndexingWorker(repository,search).drain();
+   expect((await search.findReleasedCaptions(room,'canopy',[caption])).map(c => c.id)).toEqual([caption]);
+   await prisma.$transaction(async tx => {
+     await tx.topicThread.update({ where: { id: threadId }, data: { title: 'Transit cooling' } });
+     await tx.searchIndexJob.create({ data: { id: `topic-refresh:${caption}`, sessionId: room, captionId: caption, operation: 'index_caption' } });
+   });
+   await new SessionIndexingWorker(repository,search).drain();
+   expect(await search.findReleasedCaptions(room,'canopy',[caption])).toEqual([]);
+   expect((await search.findReleasedCaptions(room,'transit',[caption])).map(c => c.id)).toEqual([caption]);
+ });
  it('retains committed jobs across a real connection failure and a worker restart', async () => {
    await prisma.searchIndexJob.create({ data: { id: `outage:${caption}`, sessionId: room, captionId: caption, operation: 'index_caption' } });
    const offline = new ElasticsearchCaptionIndex(new Client({ node: 'http://127.0.0.1:1', maxRetries: 0, requestTimeout: 200 }));
