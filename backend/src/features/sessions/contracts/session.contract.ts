@@ -1,9 +1,18 @@
 import { z } from 'zod';
 
 // Validate the short title shown to attendees when they join a room
-export const createSessionSchema = z.object({
-  title: z.string().trim().min(1).max(100)
-}).strict();
+export const createSessionSchema = z
+  .object({
+    title: z.string().trim().min(1).max(100)
+  })
+  .strict();
+
+// Normalize shared room codes before lookup or local storage access
+export const roomCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-F0-9]{8}$/);
 
 // Bound session search input before passing it to Elasticsearch
 export const searchQuerySchema = z.string().trim().min(2).max(200);
@@ -68,6 +77,7 @@ export interface SessionRecordingView {
   analysisThroughMs: number;
   analysisState: 'waiting' | 'analyzing' | 'ready' | 'failed' | 'complete';
   mediaUrl: string;
+  playbackUpdatedAt: string;
 }
 
 // Describe the current room state returned by session APIs
@@ -100,8 +110,16 @@ export type SessionEvent =
   | { type: 'caption_released'; revision: number; caption: CaptionView }
   | { type: 'live_status_changed'; revision: number; isLive: boolean }
   | { type: 'topic_updated'; revision: number; snapshot: SessionSnapshot }
-  | { type: 'recording_updated'; revision: number; recording: SessionRecordingView }
-  | { type: 'visual_moment_released'; revision: number; moment: VisualMomentView };
+  | {
+      type: 'recording_updated';
+      revision: number;
+      recording: SessionRecordingView;
+    }
+  | {
+      type: 'visual_moment_released';
+      revision: number;
+      moment: VisualMomentView;
+    };
 
 // Signal that the requested room does not exist
 export class SessionNotFoundError extends Error {
