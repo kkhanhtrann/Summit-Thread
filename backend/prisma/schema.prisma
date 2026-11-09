@@ -87,6 +87,7 @@ model PreparedRecording {
   durationMs                Int?
   playbackPositionMs        Int                      @default(0)
   isPlaying                 Boolean                  @default(false)
+  playbackUpdatedAt         DateTime                 @default(now())
   analysisWindowMinutes     Int                      @default(5)
   analysisWindowCount       Int                      @default(0)
   // Preserve unknown skip history for recordings created before review diagnostics

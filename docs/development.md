@@ -12,8 +12,10 @@ Compose project: `summit-thread-foundation-local`. PostgreSQL listens on loopbac
 
 `npm run contracts:generate` regenerates browser HTTP types from backend/openapi.json. `npm run typecheck`, `npm run test:boundaries`, `npm test`, and `npm run build` are available separately; `npm run check` runs generation, types, tests, and builds. `npm --prefix backend start` starts the compiled backend. `npm run services:logs` shows database/search diagnostics.
 
-GET `/api/health/live` checks the process only. GET `/api/health/ready` probes PostgreSQL and Elasticsearch and returns 503 with a safe status when dependencies fail. Restart unavailable services and retry the status page. The frontend shows an explicit recovery action for API startup delay.
+GET `/api/health/live` checks the process only. GET `/api/health/ready` probes PostgreSQL and Elasticsearch and returns 503 with a safe status when dependencies fail. Restart unavailable services and retry the room connection. The frontend shows an explicit recovery action for API startup delay.
 
 CI uses Node 24 and locked dependencies, starts dedicated Compose services, applies the same schema, runs checks/builds and a runtime readiness probe, then stops its services even on failure. AI and telemetry credentials are not required in CI. Keep CI required on protected branches and retain team-controlled merging.
 
 No fixtures or conference content are seeded. Media, caption release, AI-provider calls, durable outbox processing, and product recovery belong to their respective feature issues.
+
+For rooms and uploaded playback, install `ffprobe` on the backend PATH and follow [rooms and playback](features/rooms-and-playback.md). Set the backend-only `GEMINI_API_KEY` for live source-audio transcription. Media remains playable without provider access. `npm run check` also exercises isolated PostgreSQL fixture schemas, so start services and apply the canonical schema first.
