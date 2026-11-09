@@ -50,6 +50,11 @@ export interface PreparedVisualMoment {
 // Describe a released landmark with its attendee-safe image route
 export interface VisualMomentView extends PreparedVisualMoment {
   imageUrl: string;
+  // Link to the released caption spoken at or just before the still, when one exists
+  captionId: string | null;
+  // Carry topic context only when that caption already has a validated occurrence
+  occurrenceId: string | null;
+  threadId: string | null;
 }
 
 // Track the visible preparation and playback state for a room recording

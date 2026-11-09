@@ -72,6 +72,340 @@
           }
         }
       }
+    },
+    "/api/sessions/{sessionId}/visual-moments/{momentId}/image": {
+      "get": {
+        "operationId": "getVisualMomentImage",
+        "summary": "Read the original still for a released visual moment",
+        "description": "Returns image bytes only for a moment already released in this room. Unknown, unreleased, and other-room IDs share one 404 response.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "description": "Eight-character room code",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{8}$"
+            }
+          },
+          {
+            "name": "momentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^moment-d{4}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original frame extracted from the room source",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Visual moment not found, not released, or its image is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/recording/live/windows/{index}": {
+      "post": {
+        "operationId": "submitLiveVisualWindow",
+        "summary": "Submit one completed live-camera clip for visual review",
+        "description": "Accepts clips in capture order. Repeating an already committed index is a no-op; a later index is rejected. Attendee media is not carried by this route.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "description": "Eight-character room code",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{8}$"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9999
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "video/webm": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/mp4": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/quicktime": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Clip reviewed and its window committed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "recording"
+                  ],
+                  "properties": {
+                    "recording": {
+                      "$ref": "#/components/schemas/SessionRecordingView"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid room code, index, or clip type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Source is not a ready live camera or the clip is out of order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Clip exceeds the local size limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Visual review is temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "VisualMomentView": {
+        "type": "object",
+        "description": "A released original still. Delivered in room snapshots and visual_moment_released events.",
+        "required": [
+          "id",
+          "timestampMs",
+          "topicTitle",
+          "description",
+          "imageUrl",
+          "captionId",
+          "occurrenceId",
+          "threadId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^moment-d{4}$"
+          },
+          "timestampMs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Original source time of the frame"
+          },
+          "topicTitle": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Short label for what is on screen"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 280,
+            "description": "Alternative text describing the visible content"
+          },
+          "imageUrl": {
+            "type": "string"
+          },
+          "captionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Released caption spoken at or shortly before the still"
+          },
+          "occurrenceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Topic occurrence of that caption, when topic analysis assigned one"
+          },
+          "threadId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Topic thread of that occurrence"
+          }
+        }
+      },
+      "SessionRecordingView": {
+        "type": "object",
+        "required": [
+          "sourceType",
+          "status",
+          "preparationStage",
+          "mediaKind",
+          "mimeType",
+          "durationMs",
+          "playbackPositionMs",
+          "isPlaying",
+          "analysisWindowMinutes",
+          "visualReviewSkippedWindowCount",
+          "analysisThroughMs",
+          "analysisState",
+          "mediaUrl"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "camera"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "preparing",
+              "ready",
+              "failed"
+            ]
+          },
+          "preparationStage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "uploading",
+              null
+            ]
+          },
+          "mediaKind": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "video"
+            ]
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "playbackPositionMs": {
+            "type": "integer"
+          },
+          "isPlaying": {
+            "type": "boolean"
+          },
+          "analysisWindowMinutes": {
+            "type": "integer"
+          },
+          "visualReviewSkippedWindowCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Windows abandoned after bounded retries; null when history is unknown"
+          },
+          "analysisThroughMs": {
+            "type": "integer",
+            "description": "Completed-through source time for visual review"
+          },
+          "analysisState": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "analyzing",
+              "ready",
+              "failed",
+              "complete"
+            ]
+          },
+          "mediaUrl": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }
