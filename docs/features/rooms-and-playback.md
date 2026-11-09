@@ -25,7 +25,7 @@ npm run db:push
 npm run dev
 ```
 
-Install `ffprobe` (provided by FFmpeg) on the backend's `PATH`. Validation has a 30-second tool deadline. FFmpeg itself is not required for uploaded playback. The backend retains original source bytes rather than transcoding them.
+The backend's pinned `@ffprobe-installer/ffprobe` dependency supplies a platform-specific validator for macOS, Linux, and Windows; keep npm optional dependencies enabled during installation. No system FFmpeg installation or `PATH` change is required. Validation has a 30-second tool deadline. The backend retains original source bytes rather than transcoding them. An unavailable validator returns HTTP 503 rather than reporting that the recording is invalid.
 
 Configuration names: `DATABASE_URL`, `ELASTICSEARCH_URL`, `API_HOST`, `API_PORT`, `WEB_ORIGINS` (comma-separated exact browser origins), `GEMINI_API_KEY`, and `GEMINI_LIVE_TRANSCRIPTION_MODEL`. The default transcription model is `gemini-3.5-transcribe-live`. Only the backend receives provider credentials. Missing credentials leave room creation, uploads and playback usable; transcription reports a disconnected state and offers pause/resume recovery. Optional operational export uses the existing `DASH0_*` settings.
 

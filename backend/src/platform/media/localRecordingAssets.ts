@@ -5,6 +5,7 @@ import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import ffprobe from '@ffprobe-installer/ffprobe';
 import { RecordingTooLargeError } from '../../features/sessions/public';
 
 // Limit recordings to 300 MiB even when the browser omits Content-Length
@@ -67,7 +68,7 @@ export async function readRecordingDuration(
 ): Promise<number> {
   try {
     const { stdout } = await promisify(execFile)(
-      'ffprobe',
+      ffprobe.path,
       [
         '-v',
         'error',
@@ -94,7 +95,14 @@ export async function readRecordingDuration(
     )
       throw new Error();
     return duration;
-  } catch {
+  } catch (error) {
+    // Keep backend tool failures out of the invalid-source HTTP response
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error.code === 'ENOENT' || error.code === 'EACCES')
+    )
+      throw new Error('Recording validation is unavailable');
     throw new RangeError(
       'The recording could not be validated. Choose a valid file with audio.'
     );

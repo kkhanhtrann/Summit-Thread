@@ -18,4 +18,4 @@ CI uses Node 24 and locked dependencies, starts dedicated Compose services, appl
 
 No fixtures or conference content are seeded. Media, caption release, AI-provider calls, durable outbox processing, and product recovery belong to their respective feature issues.
 
-For rooms and uploaded playback, install `ffprobe` on the backend PATH and follow [rooms and playback](features/rooms-and-playback.md). Set the backend-only `GEMINI_API_KEY` for live source-audio transcription. Media remains playable without provider access. `npm run check` also exercises isolated PostgreSQL fixture schemas, so start services and apply the canonical schema first.
+For rooms and uploaded playback, `npm run install:all` installs the pinned platform-specific `ffprobe` binary; keep npm optional dependencies enabled. Follow [rooms and playback](features/rooms-and-playback.md). Set the backend-only `GEMINI_API_KEY` for live source-audio transcription. Media remains playable without provider access. `npm run check` also exercises isolated PostgreSQL fixture schemas, so start services and apply the canonical schema first.

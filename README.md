@@ -22,7 +22,7 @@ npm run dev
 
 Open http://127.0.0.1:5185 to join a room, or `/presenter` to create one, share its invitation, upload a recording and control attendee playback. `npm run dev` starts both the backend and frontend in one terminal; Docker services run in the background after `npm run services:up`.
 
-Install FFmpeg’s `ffprobe` on the backend PATH for source validation. Set the backend-only `GEMINI_API_KEY` for continuous transcription; media playback works without it. See [rooms and playback](docs/features/rooms-and-playback.md) for formats, contracts, recovery and verification status.
+The backend installs a pinned platform-specific `ffprobe` binary for source validation; no system FFmpeg installation is needed. Set the backend-only `GEMINI_API_KEY` for continuous transcription; media playback works without it. See [rooms and playback](docs/features/rooms-and-playback.md) for formats, contracts, recovery and verification status.
 
 ```sh
 npm run check
