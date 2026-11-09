@@ -233,7 +233,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
             cookie?: never;
         };
         get?: never;
@@ -250,7 +252,9 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
             cookie?: never;
         };
         get?: never;
@@ -922,7 +926,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
             cookie?: never;
         };
         requestBody: {
@@ -972,7 +978,9 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
             cookie?: never;
         };
         requestBody?: never;

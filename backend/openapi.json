@@ -607,7 +607,6 @@
       "post": {
         "operationId": "startLiveCapture",
         "summary": "Start a fresh camera source",
-        "parameters": [],
         "responses": {
           "201": {
             "description": "Committed camera source",
@@ -662,13 +661,17 @@
             }
           }
         }
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ]
     },
     "/sessions/{sessionId}/recording/live/stop": {
       "post": {
         "operationId": "stopLiveCapture",
         "summary": "End camera capture after speech finalization",
-        "parameters": [],
         "responses": {
           "200": {
             "description": "Committed camera source",
@@ -698,7 +701,12 @@
             "description": "Temporarily unavailable"
           }
         }
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ]
     }
   },
   "components": {
