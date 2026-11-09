@@ -10,7 +10,10 @@ vi.mock('../sessions/public', () => ({
 }));
 vi.mock('../transcription/public', () => ({ connectLiveTranscription: vi.fn().mockResolvedValue({ stop: async () => undefined, setPosition: () => undefined }) }));
 
-it('ends capture truthfully after signaling is lost rather than advertising reconnection', async () => {
+it.each([false, true])('ends capture after signaling loss even if API shutdown fails: %s', async fails => {
+  mocks.stop.mockReset();
+  if (fails) mocks.stop.mockRejectedValue(new Error('Synthetic dependency failure'));
+  else mocks.stop.mockResolvedValue({});
   class Recorder {
     static isTypeSupported() { return true; }
     state = 'inactive';
@@ -28,5 +31,5 @@ it('ends capture truthfully after signaling is lost rather than advertising reco
   await waitFor(() => expect(ended).toHaveBeenCalledOnce());
   expect(mocks.stop).toHaveBeenCalledWith('AB12CD34');
   view.unmount();
-  expect(trackStop).toHaveBeenCalledOnce();
+  expect(trackStop).toHaveBeenCalled();
 });

@@ -227,31 +227,29 @@ export function LiveCameraPublisher({ sessionId, stream, recording, onEnded }: L
     };
   }, [recording.analysisWindowMinutes, sessionId, stream]);
 
-  // Stop live speech and video without waiting for the separate visual queue
+  // Stop local devices even when the backend cannot acknowledge the room ending
   async function endLiveSession(): Promise<void> {
     if (isEnding) return;
     setIsEnding(true);
     setError('');
     stopRequested.current = true;
-    await transcription.current?.stop();
-    transcription.current = null;
-    await new Promise<void>((resolve) => {
-      // Queue the final camera window before stopping the room
-      const active = recorder.current;
-      if (!active || active.state !== 'recording') {
-        resolve();
-        return;
-      }
-      finalSegmentStopped.current = resolve;
-      active.stop();
-    });
     try {
+      await transcription.current?.stop();
+      transcription.current = null;
+      await new Promise<void>((resolve) => {
+        // Queue the final shorter visual window before releasing device tracks
+        const active = recorder.current;
+        if (!active || active.state !== 'recording') { resolve(); return; }
+        finalSegmentStopped.current = resolve;
+        active.stop();
+      });
       await heartbeat.current;
       await stopLiveCapture(sessionId);
-      onEnded();
     } catch {
-      setError('The session didn’t end. Try again.');
-      setIsEnding(false);
+      // Let the server heartbeat expiry settle an unreachable room without retaining device access
+    } finally {
+      for (const track of stream.getTracks()) track.stop();
+      onEnded();
     }
   }
 
