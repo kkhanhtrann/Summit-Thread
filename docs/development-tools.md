@@ -1,0 +1,35 @@
+# Development tools
+
+## Gitar
+
+Gitar reviews GitHub PRs and can diagnose CI failures and propose corrections. The GitHub App must have access to this repository, and the account plan/trial must support the requested auto-apply behavior. In Gitar Settings → Configuration, confirm `kkhanhtrann/Summit-Thread` is enabled. Repository review instructions live in `.gitar/review/instructions.md`, privacy rules in `.gitar/rules/privacy.md`, and review-fix criteria in `.gitar/config/apply.md`.
+
+Open a feature PR targeting main, link its issue, wait for CI and the Gitar review, inspect findings, and enable auto-apply on that PR when appropriate. Criteria files alone do not enable it; default-branch criteria apply after merge. Keep CI required and merge decisions under team control. Disable automatic fixes from the PR or disable repository processing in Gitar Settings. Do not delete meaningful checks to obtain a passing result. If demonstrating a deliberate failure, label it as a controlled demonstration and retain its diagnosis/fix evidence.
+
+Evidence: repository enabled in the signed-in Gitar configuration. PR review, failing-check diagnosis, Gitar-authored correction and passing-CI links will be recorded below after verification. They are not implied by configuration files.
+
+## Dash0
+
+Dash0 receives OpenTelemetry traces, structured logs and metrics from the backend and navigation/request/error/performance monitoring from the browser. Session recording is disabled. The existing `summit-thread-backend-dev` and `summit-thread-browser-dev` tokens are restricted to ingestion in the Summit Thread dataset. Backend and browser ingest tokens are separate; backend credentials must never use VITE_ names.
+
+Configure ignored backend/.env: DASH0_BACKEND_TOKEN, DASH0_OTLP_ENDPOINT, DASH0_DATASET. Configure ignored web/.env.local: VITE_DASH0_BROWSER_TOKEN, VITE_DASH0_OTLP_ENDPOINT, VITE_DASH0_DATASET. Endpoint defaults to the Oregon ingress. Set dataset to its configured identifier. Restart the API/web watcher after changes. Remove the relevant token setting to disable exports. Revoke tokens in Dash0 Auth Tokens if necessary; do not paste tokens into proof or repository files.
+
+The backend preload initializes instrumentation before importing the app; shutdown flushes exporters. Logger fields are allowlisted, sensitive content fields redacted, and HTTP query values scrubbed. Browser URL filtering removes credentials, query values and fragments, including separately exported URL fields. Test privacy with labeled synthetic markers, never real participant data. Inspect trace/log attributes before expanding instrumentation.
+
+Dash0 MCP uses a separate Reading-permission token or OAuth, not an ingest-only token. Its regional endpoint is `https://api.us-west-2.aws.dash0.com/mcp`. Register it with `codex mcp add dash0 --url https://api.us-west-2.aws.dash0.com/mcp`, authenticate with `codex mcp login dash0`, and verify a service/trace query against new foundation traffic. See the [official Dash0 MCP setup](https://www.dash0.com/hub/integrations/int_dash0_mcp/overview) and [Codex MCP configuration](https://developers.openai.com/codex/mcp/).
+
+Verification: start services/API/web, open the status page, click Check again, then inspect summit-thread-web and summit-thread-backend in Dash0 using the current time range. Confirm browser request, API health span, PostgreSQL/search dependencies, structured http_request logs, and foundation.http.requests metrics. Verify synthetic content markers do not appear. Record sanitized observations and URLs below. If nothing arrives, check region, dataset identifier, ingest scope, token presence, proxy URL, and browser export/network errors; never print a token to troubleshoot.
+
+## Verification record
+
+Verified November 9, 2026:
+
+- Local Node 24 schema application, readiness HTTP 200, and browser status/retry succeeded against the isolated services.
+- [Foundation PR #7](https://github.com/kkhanhtrann/Summit-Thread/pull/7) received a real Gitar review and CI diagnosis. [The failing CI run](https://github.com/kkhanhtrann/Summit-Thread/actions/runs/42663386140) preserved the URL privacy regression. [Gitar's diagnosis](https://github.com/kkhanhtrann/Summit-Thread/pull/7#issuecomment-6746604836) identified URL leakage and watcher exit-status loss. Auto-apply was enabled on the PR; [Gitar's correction](https://github.com/kkhanhtrann/Summit-Thread/commit/cf3290b0a0ac95ba5f5803a5bc55aa892ccc7aa8) fixed both. The tests remained intact; [CI passed on the corrected commit](https://github.com/kkhanhtrann/Summit-Thread/actions/runs/42664619372), and the Node 24 local check passed after that correction. A subsequent SDK attribute review added separate-fragment and malformed/missing-URL coverage and removed those remaining leakage paths.
+- Main branch protection requires the GitHub Actions `verify` check, up-to-date branches, pull requests and resolved review conversations, including for administrators. Auto-merge and automatic approval are not enabled.
+- Dash0 [service catalog](https://app.dash0.com/services) showed fresh summit-thread-backend traffic; [websites](https://app.dash0.com/websites) showed summit-thread-web with one session/request plus LCP and CLS monitoring. Session recording is excluded from the enabled instrumentation list.
+- A read-only Agent0 investigation for 17:15:00–17:24:37 UTC confirmed 3 readiness server spans (all 200), 9 PostgreSQL client spans and 3 Elasticsearch ping calls inside those readiness traces; 3 trace-linked http_request logs plus 1 server_started log; and foundation.http.requests reaching 3. The browser request shared the backend trace ID, confirming propagation. Its 7 web events included navigation, readiness request and web vitals. These are small-sample foundation checks, not product verification.
+- Agent0 counted zero synthetic-marker matches in the observed span/log/web attributes and sampled metric labels. The first window did not cover liveness or dependency-failure traffic; error paths are covered by local behavior tests. A later synthetic browser run at 17:28:31–17:28:37 UTC exercised the query/fragment filters and retry. Agent0 confirmed all 9 browser records contained exactly token=REDACTED in full/query and page.url fields, with zero differing values. The one navigation-timing body with a token parameter also contained exactly REDACTED. No fragments were exported. LCP, CLS and INP monitoring arrived, and the liveness probe was observed at 17:26:01 UTC with status 200.
+- Dash0 MCP was registered at the Oregon endpoint, and OAuth login completed successfully after user consent. The running chat does not expose the newly registered MCP tools, so a direct MCP telemetry read was not exercised in this session. The live telemetry and privacy verification above used the signed-in Agent0 UI. MCP registration/OAuth and actual MCP-query proof are recorded separately.
+
+Keep observed evidence separate from automated tests and configured-but-unverified behavior. Append later feature investigations with symptom, time window, query, supported cause, fix, and successful recheck.
