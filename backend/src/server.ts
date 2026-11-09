@@ -1,3 +1,7 @@
+import { VisualMomentService, PrismaVisualMomentRepository } from './features/sessions/public';
+import { LocalVisualAssetStore } from './platform/media/localVisualAssets';
+import { createGeminiVisualMomentAnalyzer } from './platform/ai/geminiVisualMomentAnalyzer';
+import { createVisualMomentTelemetry } from './platform/telemetry/visualMomentTelemetry';
 import type { Server } from 'node:http';
 import { ElasticsearchCaptionIndex } from './features/search/public';
 import { ReleasedContentRepository, SessionIndexingWorker, SearchUnavailableError } from './features/sessions/public';
@@ -49,10 +53,16 @@ const topicWorker = env.GEMINI_API_KEY?.trim()
       events
     )
   : { start: () => undefined, wake: async () => undefined, stop: () => undefined };
+const visualMoments = new VisualMomentService({
+  repository: new PrismaVisualMomentRepository(prisma), assets: new LocalVisualAssetStore(),
+  analyzer: createGeminiVisualMomentAnalyzer({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_VISUAL_MODEL }),
+  events, telemetry: createVisualMomentTelemetry()
+});
 const recordings = new RecordingService({
   repository,
   events,
   assets: new LocalRecordingAssetStore(),
+  onPlaybackCommitted: id => { void visualMoments.handlePlaybackProgress(id).catch(() => logger.warn({ event: 'visual_progress_failed' })); },
   readDuration: readRecordingDuration
 });
 const transcription = new LiveTranscriptionCoordinator({
@@ -75,6 +85,7 @@ async function stop() {
   topicWorker.stop();
   await gateway?.close();
   await indexing.stop();
+  await visualMoments.waitForIdle();
   server?.close();
   server?.closeAllConnections();
   await Promise.allSettled([prisma.$disconnect(), search.close()]);
@@ -92,7 +103,8 @@ async function start() {
       await Promise.all([prisma.$queryRaw`SELECT 1`, search.ping()]);
     },
     { sessions, recordings },
-    { service: privateChat, context: id => content.getReleasedContent(id) }
+    { service: privateChat, context: id => content.getReleasedContent(id) },
+    { visualMoments }
   );
   server = app.listen(env.API_PORT, env.API_HOST, () =>
     logger.info({

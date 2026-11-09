@@ -249,8 +249,7 @@ export function PresenterMediaStage({
         {String(Math.floor(position / 1000) % 60).padStart(2, '0')}
       </p>
       <p className="muted">
-        Thread update interval: {recording.analysisWindowMinutes} minutes. Topic
-        processing is planned separately.
+        Thread update interval: {recording.analysisWindowMinutes} minutes. Topic and visual review follow completed source intervals.
       </p>
       {transcriptError && <p role="alert">{transcriptError}</p>}
       {syncError && <p role="alert">{syncError}</p>}

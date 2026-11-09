@@ -133,3 +133,10 @@ describe('PostgreSQL topic snapshots', () => {
     expect(snapshot?.threads).toEqual([]);
   });
 });
+it('restores only committed visual landmarks and their spoken context on reconnect', async () => {
+  const id = 'B0000003';
+  await playingRoom(id, 3);
+  await prisma.preparedRecording.update({ where: { sessionId: id }, data: { mediaKind: 'video', visualMoments: [{ id: 'moment-0000', timestampMs: 2500, topicTitle: 'Synthetic still', description: 'Synthetic original frame' }], releasedVisualMomentCount: 1 } });
+  const snapshot = await rooms.getSnapshot(id);
+  expect(snapshot.visualMoments).toEqual([expect.objectContaining({ id: 'moment-0000', captionId: `${id}-fixture-1`, imageUrl: `/api/sessions/${id}/visual-moments/moment-0000/image` })]);
+});

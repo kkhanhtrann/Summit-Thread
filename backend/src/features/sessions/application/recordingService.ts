@@ -62,6 +62,7 @@ export class RecordingService {
       repository: RecordingRepository;
       assets: RecordingAssets;
       events: SessionEventPort;
+      onPlaybackCommitted?(id: string): void;
       readDuration(path: string, kind: 'audio' | 'video'): Promise<number>;
     }
   ) {}
@@ -134,7 +135,10 @@ export class RecordingService {
         )
       );
     this.queues.set(id, pending);
-    return pending.finally(() => {
+    return pending.then(recording => {
+      this.dependencies.onPlaybackCommitted?.(id);
+      return recording;
+    }).finally(() => {
       if (this.queues.get(id) === pending) this.queues.delete(id);
     });
   }

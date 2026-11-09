@@ -47,7 +47,7 @@ const releasedMomentSchema = z.object({
 }).strict();
 
 // Read released moments from durable JSON
-function readReleasedMoments(value: Prisma.JsonValue): PreparedVisualMoment[] {
+export function readReleasedMoments(value: Prisma.JsonValue): PreparedVisualMoment[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     const parsed = releasedMomentSchema.safeParse(item);

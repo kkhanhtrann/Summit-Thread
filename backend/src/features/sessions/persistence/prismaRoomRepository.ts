@@ -11,6 +11,7 @@ import {
   type SessionSnapshot,
   type SessionRecordingView
 } from '../contracts/session.contract';
+import { readReleasedMoments } from './prismaVisualMoment.repository';
 import type { RoomRepository } from '../application/roomService';
 import type { RecordingRepository } from '../application/recordingService';
 
@@ -121,7 +122,10 @@ export async function loadSnapshot(
     suggestedQuestions: session.suggestedQuestions,
     topicAnalysisSkippedCaptionCount: session.topicAnalysisSkippedCaptionCount,
     recording: session.recording ? recordingView(session.recording) : null,
-    visualMoments: []
+    visualMoments: session.recording?.mediaKind === 'video' ? readReleasedMoments(session.recording.visualMoments).map(moment => {
+      const spoken = [...captions].reverse().find(caption => caption.timestampMs <= moment.timestampMs && caption.timestampMs >= moment.timestampMs - 60000);
+      return { ...moment, imageUrl: `/api/sessions/${id}/visual-moments/${moment.id}/image`, captionId: spoken?.id ?? null, occurrenceId: spoken?.occurrenceId ?? null, threadId: spoken?.threadId ?? null };
+    }) : []
   };
 }
 // Store released speech, revision cursors and indexing jobs in PostgreSQL

@@ -33,3 +33,11 @@ Verified November 9, 2026:
 - Dash0 MCP was registered at the Oregon endpoint, and OAuth login completed successfully after user consent. The running chat does not expose the newly registered MCP tools, so a direct MCP telemetry read was not exercised in this session. The live telemetry and privacy verification above used the signed-in Agent0 UI. MCP registration/OAuth and actual MCP-query proof are recorded separately.
 
 Keep observed evidence separate from automated tests and configured-but-unverified behavior. Append later feature investigations with symptom, time window, query, supported cause, fix, and successful recheck.
+
+## Integrated verification (issue #6)
+
+The initial integration audit found visual review implemented but not connected to server composition, committed playback ticks, transactional snapshots or the attendee gallery. Two regressions first failed for missing playback notification and missing reconnect landmarks. The integration changes connect the existing service/provider/assets/telemetry and preserve released-only snapshot context. The full Node 24 check passed after those connections; browser/provider results are tracked separately in the walkthrough.
+
+[Private Ask PR #13](https://github.com/kkhanhtrann/Summit-Thread/pull/13) was Gitar-reviewed; its two findings (polling focus theft and repeated transcript reads) were fixed with regression tests and resolved by Gitar. Both required CI runs passed. Its read-only Dash0 Agent0 investigation observed three recording-backed HTTP 200 answers, three retrieval spans, five sources each, citation counts 1/2/2 and answer durations 2674/2593/3365 ms. Count-only content checks found no private body/content keys in the inspected requests. See the Ask guide for the exact windows and limits.
+
+Dash0 diagnosed browser proxy 502s during development backend restarts; the timing supports downtime as the cause, and later successful answers demonstrated recovery. This was observed development activity, not a production incident or a controlled Elasticsearch interruption. The dedicated-service interruption required by the final walkthrough is a distinct check and must have its own recorded results.

@@ -1,3 +1,4 @@
+import { VisualMomentGallery } from '../visual-moments/public';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   formatThreadUpdateCountdown,
@@ -229,6 +230,7 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
               </p>
             </section>
           )}
+          <VisualMomentGallery moments={snapshot.visualMoments} recording={recording} onOpenSpokenMoment={id => { setSelectedCaptionId(id); setFollowing(false); setActiveTab('transcript'); }} onOpenTopic={(threadId, occurrenceId) => { setOpenThreadId(threadId); setOpenOccurrenceId(occurrenceId); }} />
           {activeEntry && activeTab !== 'topics' && (
             <section className="current-topic" aria-labelledby="current-topic-title">
               <p className="topic-eyebrow">Current topic</p>
