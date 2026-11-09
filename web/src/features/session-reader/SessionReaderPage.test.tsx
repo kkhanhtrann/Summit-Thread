@@ -156,12 +156,15 @@ describe('topic reading', () => {
     vi.useFakeTimers();
     const initial = topicSnapshot();
     const { rerender } = render(<SessionReaderPage snapshot={initial} />);
+    const notice = document.querySelector('.topic-update-notice');
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveAttribute('role', 'status');
     expect(screen.queryByText('Topic updated')).not.toBeInTheDocument();
     rerender(<SessionReaderPage snapshot={{ ...initial, recording: { ...initial.recording!, playbackPositionMs: 51000 } }} />);
     expect(screen.queryByText('Topic updated')).not.toBeInTheDocument();
     const updated = { ...initial, threads: [previousTopic, { ...currentTopic, summary: 'Synthetic updated explanation' }] };
     rerender(<SessionReaderPage snapshot={updated} />);
-    expect(screen.getByText('Topic updated')).toHaveAttribute('role', 'status');
+    expect(screen.getByText('Topic updated')).toBe(notice);
     act(() => vi.advanceTimersByTime(4000));
     expect(screen.queryByText('Topic updated')).not.toBeInTheDocument();
   });

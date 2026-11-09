@@ -491,7 +491,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                         Next topic update in {formatThreadUpdateCountdown(sourcePositionMs, recording.analysisWindowMinutes)}
                       </span>
                     )}
-                    {topicUpdated && <span className="topic-update-notice" role="status">Topic updated</span>}
+                    <span className="topic-update-notice" role="status">{topicUpdated ? 'Topic updated' : ''}</span>
                     {isReadingEarlier && <button className="text-action" type="button" onClick={returnToNow}>Back to current topic</button>}
                   </div>
 
