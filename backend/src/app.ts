@@ -19,12 +19,21 @@ import {
   SessionNotFoundError,
   type VisualMomentService
 } from './features/sessions/public';
+import { createPrivateChatRouter, type PrivateChatRouteService } from './features/private-chat/public';
+import type { ReleasedRoomContent } from './features/sessions/public';
+import { SearchUnavailableError } from './features/sessions/public';
+import { AiUnavailableError } from './platform/ai/aiUnavailableError';
 import { logger } from './platform/logging/logger';
 
 // Define optional feature services while keeping isolated health checks available
 export interface ProductServices {
   sessions: SessionRouteService;
   recordings: PreparedRecordingRouteService;
+}
+// Describe private Ask ports without coupling them to media workflows
+export interface PrivateAskHttpDependencies {
+  service: PrivateChatRouteService;
+  context(sessionId: string): Promise<ReleasedRoomContent>;
 }
 // Describe optional features composed by the server once their dependencies exist
 export interface AppFeatures {
@@ -34,12 +43,13 @@ export interface AppFeatures {
 export function createApp(
   checkDependencies?: () => Promise<void>,
   services?: ProductServices,
+  privateAsk?: PrivateAskHttpDependencies,
   features: AppFeatures = {}
 ) {
   const app = express();
   app.use(helmet());
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '16kb', type: 'application/json' }));
+  app.use(express.json({ limit: '32kb', type: 'application/json' }));
   app.use((req, res, next) => {
     const started = performance.now();
     res.on('finish', () => {
@@ -84,6 +94,14 @@ export function createApp(
       createPreparedRecordingRouter(services.recordings)
     );
   }
+  if (privateAsk) {
+    app.use(['/api/sessions/:sessionId/chat', '/api/sessions/:sessionId/ask-context'], (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+    app.use('/api/sessions', createPrivateChatRouter(privateAsk.service));
+    app.get('/api/sessions/:sessionId/ask-context', async (req, res, next) => {
+      if (!/^[A-F0-9]{8}$/.test(req.params.sessionId)) { res.status(400).json({ error: 'Room code is invalid' }); return; }
+      try { res.json(await privateAsk.context(req.params.sessionId)); } catch (error) { next(error); }
+    });
+  }
   app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
   app.use(
     (
@@ -120,7 +138,10 @@ export function createApp(
         503: 'The service is temporarily unavailable. Try again'
       };
       logger.info({ event: 'room_request_failed', statusCode: status });
-      res.status(status).json({ error: messages[status] });
+      const message = error instanceof AiUnavailableError ? 'Private Ask is temporarily unavailable'
+        : error instanceof SearchUnavailableError ? 'Search is temporarily unavailable'
+        : messages[status];
+      res.status(status).json({ error: message });
     }
   );
   return app;

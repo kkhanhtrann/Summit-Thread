@@ -7,3 +7,6 @@ export { VisualMomentService } from './application/visualMomentService';
 export type { VisualEventPort, VisualMomentTelemetryPort } from './application/visualMomentService';
 export { PrismaVisualMomentRepository } from './persistence/prismaVisualMoment.repository';
 export { createVisualMomentRouter } from './http/visualMoments.routes';
+export { ReleasedContentRepository } from './persistence/releasedContent.repository';
+export { SessionIndexingWorker } from './application/sessionIndexingWorker';
+export type { ReleasedRoomContent, IndexQueueRepository } from './contracts/releasedContent';

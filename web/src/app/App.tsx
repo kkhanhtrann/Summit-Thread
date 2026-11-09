@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { JoinSessionPage, useSessionFeed } from '../features/sessions/public';
 import { CreateRoomPage, PresenterPage } from '../features/presenter/public';
+import { PrivateChatPage } from '../features/private-chat/public';
 import { SessionReaderPage } from '../features/session-reader/public';
 
 // Follow browser history and remount all private room state when the route changes
@@ -15,6 +16,10 @@ export function App() {
     history.pushState({}, '', next);
     setPath(next);
   };
+  if (path === '/ask') {
+    const code = new URL(window.location.href).searchParams.get('session')?.trim().toUpperCase();
+    return code && /^[A-F0-9]{8}$/.test(code) ? <PrivateChatPage key={code} sessionId={code} /> : <main><h1>Choose a room</h1><p>Use your room’s private Ask link or enter its code.</p><form action="/ask"><label htmlFor="ask-room">Room code</label><input name="session" id="ask-room" required pattern="[A-Fa-f0-9]{8}" minLength={8} maxLength={8} /><button>Open private Ask</button></form><a href="/">Join a room</a></main>;
+  }
   const route = /^\/(rooms|presenter)\/([^/]+)\/?$/.exec(path);
   const code = route?.[2]?.trim().toUpperCase();
   return (

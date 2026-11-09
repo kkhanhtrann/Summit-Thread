@@ -24,6 +24,8 @@ jobs:
       - run: npm run services:up
       - run: npm run db:push
       - run: npm run check
+      - name: Verify durable Ask indexing and recovery
+        run: npm --prefix backend run test:search:integration
       - name: Verify runtime readiness
         run: |
           npm --prefix backend start > /tmp/summit-api.log 2>&1 &
