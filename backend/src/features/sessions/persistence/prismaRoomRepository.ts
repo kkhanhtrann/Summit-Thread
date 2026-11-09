@@ -7,6 +7,7 @@ import {
   RecordingConflictError,
   RecordingNotReadyError,
   SessionNotFoundError,
+  type CaptionView,
   type SessionSnapshot,
   type SessionRecordingView
 } from '../contracts/session.contract';
@@ -33,11 +34,95 @@ function recordingView(record: PreparedRecording): SessionRecordingView {
   };
 }
 // Serialize room mutations with a database row lock, including future feature writers
-async function lockRoom(tx: Prisma.TransactionClient, id: string) {
+export async function lockRoom(tx: Prisma.TransactionClient, id: string) {
   const rows = await tx.$queryRaw<
     { id: string }[]
   >`SELECT id FROM "ConferenceSession" WHERE id = ${id} FOR UPDATE`;
   if (!rows.length) throw new SessionNotFoundError();
+}
+// Map a released caption with its committed topic occurrence, if any
+function captionView(caption: {
+  id: string;
+  sequence: number;
+  timestampMs: number;
+  text: string;
+  topicOccurrence: { id: string; threadId: string } | null;
+}): CaptionView {
+  return {
+    id: caption.id,
+    sequence: caption.sequence,
+    timestampMs: caption.timestampMs,
+    text: caption.text,
+    ...(caption.topicOccurrence
+      ? {
+          threadId: caption.topicOccurrence.threadId,
+          occurrenceId: caption.topicOccurrence.id
+        }
+      : {})
+  };
+}
+// Read released captions, topic history and source state within the caller's transaction
+// Limit occurrence captions to the released cursor so topics never expose unreleased speech
+export async function loadSnapshot(
+  tx: Prisma.TransactionClient,
+  id: string
+): Promise<SessionSnapshot> {
+  const session = await tx.conferenceSession.findUnique({
+    where: { id },
+    include: { recording: true }
+  });
+  if (!session) throw new SessionNotFoundError();
+  const captions = (
+    await tx.captionSegment.findMany({
+      where: { sessionId: id, sequence: { lt: session.releasedCount } },
+      orderBy: { sequence: 'asc' },
+      include: { topicOccurrence: { select: { id: true, threadId: true } } }
+    })
+  ).map(captionView);
+  // Order by first visit because threads created in one commit share a timestamp
+  const threads = (
+    await tx.topicThread.findMany({
+      where: { sessionId: id },
+      include: { occurrences: { orderBy: { ordinal: 'asc' } } }
+    })
+  ).sort(
+    (left, right) =>
+      (left.occurrences[0]?.ordinal ?? Number.MAX_SAFE_INTEGER) -
+      (right.occurrences[0]?.ordinal ?? Number.MAX_SAFE_INTEGER)
+  );
+  return {
+    session: {
+      id,
+      title: session.title,
+      eventName: session.eventName,
+      speakerName: session.speakerName,
+      contentLabel: session.contentLabel,
+      revision: session.revision,
+      releasedCount: session.releasedCount,
+      isLive: session.isLive
+    },
+    captions,
+    threads: threads.map((thread) => ({
+      id: thread.id,
+      title: thread.title,
+      summary: thread.summary,
+      occurrences: thread.occurrences.map((occurrence) => ({
+        id: occurrence.id,
+        summary: occurrence.summary,
+        startedAtMs: occurrence.startedAtMs,
+        endedAtMs: occurrence.endedAtMs,
+        evidenceCaptionIds: occurrence.evidenceCaptionIds,
+        captions: captions.filter(
+          (caption) => caption.occurrenceId === occurrence.id
+        )
+      }))
+    })),
+    activeOccurrenceId: session.currentOccurrenceId,
+    suggestedQuestions: session.suggestedQuestions,
+    topicAnalysisSkippedCaptionCount: session.topicAnalysisSkippedCaptionCount,
+    recording: session.recording ? recordingView(session.recording) : null,
+    visualMoments: []
+  };
 }
 // Store released speech, revision cursors and indexing jobs in PostgreSQL
 export class PrismaRoomRepository
@@ -58,46 +143,9 @@ export class PrismaRoomRepository
   }
   // Read one consistent released snapshot rather than mixing concurrent revisions
   getSnapshot(id: string): Promise<SessionSnapshot> {
-    return this.prisma.$transaction(
-      async (tx) => {
-        const session = await tx.conferenceSession.findUnique({
-          where: { id },
-          include: { recording: true }
-        });
-        if (!session) throw new SessionNotFoundError();
-        const captions = await tx.captionSegment.findMany({
-          where: { sessionId: id, sequence: { lt: session.releasedCount } },
-          orderBy: { sequence: 'asc' }
-        });
-        return {
-          session: {
-            id,
-            title: session.title,
-            eventName: session.eventName,
-            speakerName: session.speakerName,
-            contentLabel: session.contentLabel,
-            revision: session.revision,
-            releasedCount: session.releasedCount,
-            isLive: session.isLive
-          },
-          captions: captions.map(({ id, sequence, timestampMs, text }) => ({
-            id,
-            sequence,
-            timestampMs,
-            text
-          })),
-          threads: [],
-          activeOccurrenceId: null,
-          suggestedQuestions: [],
-          topicAnalysisSkippedCaptionCount: 0,
-          recording: session.recording
-            ? recordingView(session.recording)
-            : null,
-          visualMoments: []
-        };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
-    );
+    return this.prisma.$transaction((tx) => loadSnapshot(tx, id), {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead
+    });
   }
   // Pause unfinished sources and fail interrupted uploads while preserving released records
   async pauseActiveSessions() {
