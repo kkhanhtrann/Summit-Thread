@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { createConnection } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import type { LiveTranscriptionCoordinator } from '../application/liveTranscriptionCoordinator';
@@ -56,7 +57,7 @@ async function fixture(positionMs = 1250) {
     );
     return { socket, messages };
   };
-  return { capture, start, getRecordingClock, refreshTopics, url, open };
+  return { capture, start, getRecordingClock, refreshTopics, url, open, server };
 }
 async function rejection(url: string, origin: string) {
   return new Promise<number | undefined>((resolve) => {
@@ -70,6 +71,66 @@ async function rejection(url: string, origin: string) {
   });
 }
 describe('source transcription gateway', () => {
+  it('releases the room after a malformed WebSocket handshake', async () => {
+    const f = await fixture();
+    const url = new URL(f.url);
+    const status = await new Promise<string>((resolve, reject) => {
+      const socket = createConnection(Number(url.port), url.hostname, () => {
+        socket.write(
+          `GET ${url.pathname} HTTP/1.1\r\nHost: ${url.host}\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nOrigin: http://127.0.0.1:5185\r\nSec-WebSocket-Key: invalid\r\nSec-WebSocket-Version: 13\r\n\r\n`
+        );
+      });
+      let response = '';
+      socket.on('data', (data) => {
+        response += data.toString();
+      });
+      socket.on('end', () => resolve(response.split('\r\n')[0]!));
+      socket.on('error', reject);
+    });
+    expect(status).toContain('400');
+    const { socket } = await f.open();
+    expect(f.start).toHaveBeenCalledOnce();
+    socket.close();
+  });
+  it('releases a disconnected pending handshake without clearing a replacement reservation', async () => {
+    const f = await fixture();
+    let release!: (clock: {
+      positionMs: number;
+      durationMs: number;
+      analysisWindowMinutes: number;
+    }) => void;
+    f.getRecordingClock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    const disconnected = new Promise<void>((resolve) => {
+      f.server.once('upgrade', (_req, socket) => socket.once('close', resolve));
+    });
+    const abandoned = new WebSocket(f.url, { origin: 'http://127.0.0.1:5185' });
+    abandoned.on('error', () => undefined);
+    await vi.waitFor(() => expect(f.getRecordingClock).toHaveBeenCalledOnce());
+    abandoned.terminate();
+    try {
+      await disconnected;
+      const { socket } = await f.open();
+      release({
+        positionMs: 1250,
+        durationMs: 180000,
+        analysisWindowMinutes: 1
+      });
+      await vi.waitFor(() => expect(f.start).toHaveBeenCalledOnce());
+      expect(await rejection(f.url, 'http://127.0.0.1:5185')).toBe(409);
+      socket.close();
+    } finally {
+      release({
+        positionMs: 1250,
+        durationMs: 180000,
+        analysisWindowMinutes: 1
+      });
+    }
+  });
   it('validates origins and room existence before provider allocation', async () => {
     const f = await fixture();
     expect(await rejection(f.url, 'https://untrusted.example')).toBe(403);

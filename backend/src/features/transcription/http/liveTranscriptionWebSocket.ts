@@ -68,26 +68,48 @@ export function attachLiveTranscriptionWebSocket(
       return;
     }
     reserved.add(id);
+    let connected = false;
+    let released = false;
+    // Release only this attempt's reservation, including aborted handshakes
+    const release = () => {
+      if (released) return;
+      released = true;
+      reserved.delete(id);
+    };
+    const abortPending = () => {
+      if (connected) return;
+      release();
+      socket.destroy();
+    };
+    socket.once('close', abortPending);
+    socket.once('end', abortPending);
+    socket.once('error', abortPending);
     track(
       options
         .getRecordingClock(id)
         .then((clock) => {
           if (closing || socket.destroyed || !clock) {
-            reserved.delete(id);
+            release();
             reject(socket, 404);
             return;
           }
-          wss.handleUpgrade(req, socket, head, (client) =>
-            connect(client, id, clock)
-          );
+          wss.handleUpgrade(req, socket, head, (client) => {
+            connected = true;
+            connect(client, id, clock, release);
+          });
         })
         .catch(() => {
-          reserved.delete(id);
+          release();
           reject(socket, 503);
         })
     );
   };
-  function connect(client: WebSocket, id: string, clock: RecordingClock) {
+  function connect(
+    client: WebSocket,
+    id: string,
+    clock: RecordingClock,
+    release: () => void
+  ) {
     let capture:
       | Awaited<ReturnType<LiveTranscriptionCoordinator['start']>>
       | undefined;
@@ -112,9 +134,7 @@ export function attachLiveTranscriptionWebSocket(
           .then(() => {
             options.refreshTopics(id);
           })
-          .finally(() => {
-            reserved.delete(id);
-          });
+          .finally(release);
         track(stopping);
       }
       return stopping;
@@ -166,7 +186,7 @@ export function attachLiveTranscriptionWebSocket(
             message:
               'The transcript could not connect. Check backend configuration, then pause and resume to retry.'
           });
-          reserved.delete(id);
+          release();
           client.close(1011, 'Transcription unavailable');
         })
     );
