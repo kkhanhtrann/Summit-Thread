@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { JoinSessionPage, useSessionFeed } from '../features/sessions/public';
-import { CreateRoomPage, PresenterPage } from '../features/presenter/public';
+import { PresenterPage } from '../features/presenter/public';
 import { PrivateChatPage } from '../features/private-chat/public';
 import { SessionReaderPage } from '../features/session-reader/public';
 
@@ -22,6 +22,7 @@ export function App() {
   }
   const route = /^\/(rooms|presenter)\/([^/]+)\/?$/.exec(path);
   const code = route?.[2]?.trim().toUpperCase();
+  if (path === '/presenter' || route?.[1] === 'presenter') return <PresenterPage key={code ?? 'create'} initialSessionId={code} />;
   if (route?.[1] === 'rooms') return <Room key={`rooms:${code}`} code={code!} presenter={false} />;
   return (
     <>
@@ -38,8 +39,6 @@ export function App() {
           code={code!}
           presenter={route[1] === 'presenter'}
         />
-      ) : path === '/presenter' ? (
-        <CreateRoomPage navigate={navigate} />
       ) : (
         <JoinSessionPage navigate={navigate} />
       )}
@@ -47,7 +46,7 @@ export function App() {
     </>
   );
 }
-function Room({ code, presenter }: { code: string; presenter: boolean }) {
+function Room({ code }: { code: string; presenter: boolean }) {
   const { snapshot, connectionState, error, retry } = useSessionFeed(code);
   if (!snapshot)
     return (
@@ -63,22 +62,5 @@ function Room({ code, presenter }: { code: string; presenter: boolean }) {
         <a href="/">Enter another code</a>
       </main>
     );
-  if (!presenter) return <SessionReaderPage key={code} snapshot={snapshot} connectionState={connectionState} error={error} retry={retry} />;
-  return (
-    <main className="room">
-      <div className="room-heading">
-        <h1>{snapshot.session.title}</h1>
-        <p className="muted" role="status">
-          {connectionState === 'connected'
-            ? 'Room connected'
-            : 'Reconnecting to the room…'}
-        </p>
-      </div>
-      {presenter ? (
-        <PresenterPage key={code} snapshot={snapshot} />
-      ) : (
-        <SessionReaderPage key={code} snapshot={snapshot} />
-      )}
-    </main>
-  );
+  return <SessionReaderPage key={code} snapshot={snapshot} connectionState={connectionState} error={error} retry={retry} />;
 }

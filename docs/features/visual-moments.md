@@ -145,7 +145,7 @@ An FFmpeg frame-provenance test decodes a synthetic two-color video. It runs onl
 
 ## Known limits and verification status
 
-- The November 9 real-recording run exposed truncated structured output: the 400-token generation ceiling was consumed by model reasoning (380 reasoning tokens, 6 answer tokens, MAX_TOKENS). A diagnostic rerun with an 8192-token ceiling returned STOP and one validated suggestion (712 reasoning tokens, 70 answer tokens). This proves provider output recovery; integrated frame release and browser image verification remain distinct checks. FFmpeg/FFprobe are installed.
+- The November 9 real-recording run exposed truncated structured output: the 400-token generation ceiling was consumed by model reasoning (380 reasoning tokens, 6 answer tokens, MAX_TOKENS). A diagnostic rerun with an 8192-token ceiling returned STOP and one validated suggestion (712 reasoning tokens, 70 answer tokens). The subsequent integrated final window completed on its first attempt in 33680 ms, released one original still at source 11:02, and rendered that image and its description inside the topic dialog in Brave. Earlier windows remain accurately marked skipped. FFmpeg/FFprobe are installed.
 - Issue #6 composes the visual service in server.ts, signals it after committed playback updates, restores released metadata in transactional room snapshots, and mounts the gallery in the attendee reader. Topic threads and private Ask are integrated.
 - The Prisma repository has no database-backed test yet.
 - Spoken context uses a fixed 60-second lookback. Late-finalized speech may attach on a later snapshot rather than in the release event.

@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../transcription/public', () => ({
   connectLiveTranscription: mocks.connect
 }));
-vi.mock('../sessions/public', () => ({
-  updateRecordingPlayback: mocks.update
+vi.mock('../sessions/public', async importOriginal => ({
+  ...await importOriginal<object>(), updateRecordingPlayback: mocks.update
 }));
 class FakeStream {
   constructor(public tracks: MediaStreamTrack[]) {}
@@ -140,7 +140,8 @@ it('keeps a failed transcript disconnected until the presenter retries playback'
 it('keeps the changing source clock outside the connection announcement', () => {
   render(<PresenterMediaStage sessionId="AB12CD34" recording={recording} />);
   expect(screen.getByRole('status').textContent).not.toContain('Source');
-  expect(screen.getByText(/Source 0:00/)).toBeInTheDocument();
+  fireEvent.playing(screen.getByLabelText('Talk video player'));
+  expect(screen.getByText(/Next topic update in/).closest('[aria-live]')).toHaveAttribute('aria-live', 'off');
 });
 it('commits the exact validated duration at source end despite browser rounding', async () => {
   render(<PresenterMediaStage sessionId="AB12CD34" recording={recording} />);

@@ -1317,7 +1317,7 @@ body:has(.topic-thread-dialog[open]), body:has(.source-citation-dialog[open]) { 
 
 
 .reader-shell,
-.presenter-shell {
+:scope.presenter-shell {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
@@ -1326,21 +1326,21 @@ body:has(.topic-thread-dialog[open]), body:has(.source-citation-dialog[open]) { 
 :scope .site-header,
 :scope .reader-main,
 :scope .site-footer,
-.presenter-shell .site-header,
-.presenter-shell .presenter-main {
+:scope.presenter-shell .site-header,
+:scope.presenter-shell .presenter-main {
   width: min(calc(100% - 4rem), 1840px);
   max-width: 1840px;
   margin-inline: auto;
 }
 
 :scope .site-header,
-.presenter-shell .site-header {
+:scope.presenter-shell .site-header {
   min-height: 4.5rem;
   border-color: var(--color-rule);
 }
 
 :scope .wordmark,
-.presenter-shell .wordmark {
+:scope.presenter-shell .wordmark {
   color: var(--color-ink);
   font-size: 1.1rem;
   font-weight: 650;
@@ -1363,7 +1363,7 @@ body:has(.topic-thread-dialog[open]), body:has(.source-citation-dialog[open]) { 
 }
 
 :scope .session-heading h1,
-.presenter-shell .presenter-session-heading h1 {
+:scope.presenter-shell .presenter-session-heading h1 {
   max-width: 56ch;
   margin: 0;
   color: var(--color-ink);
@@ -3057,7 +3057,7 @@ body:has(.topic-thread-dialog[open]), body:has(.source-citation-dialog[open]) { 
   height: calc(100dvh - 6.3rem);
 }
 
-.presenter-shell .presenter-main {
+:scope.presenter-shell .presenter-main {
   width: min(calc(100% - 4rem), 1840px);
   max-width: 1840px;
   margin-inline: auto;
@@ -3393,7 +3393,7 @@ body:has(.source-citation-dialog[open]) {
 .topic-thread-dialog :focus-visible,
 .source-citation-dialog :focus-visible,
 :scope :focus-visible,
-.presenter-shell :focus-visible {
+:scope.presenter-shell :focus-visible {
   outline-color: var(--color-focus);
 }
 
@@ -3443,8 +3443,8 @@ body:has(.source-citation-dialog[open]) {
   :scope .site-header,
   :scope .reader-main,
   :scope .site-footer,
-  .presenter-shell .site-header,
-  .presenter-shell .presenter-main {
+  :scope.presenter-shell .site-header,
+  :scope.presenter-shell .presenter-main {
     width: min(calc(100% - 2.5rem), 1840px);
   }
 
@@ -3574,8 +3574,8 @@ body:has(.source-citation-dialog[open]) {
   :scope .site-header,
   :scope .reader-main,
   :scope .site-footer,
-  .presenter-shell .site-header,
-  .presenter-shell .presenter-main,
+  :scope.presenter-shell .site-header,
+  :scope.presenter-shell .presenter-main,
   .presenter-main:not(:has(.presenter-workspace)) {
     width: min(calc(100% - 2rem), 1840px);
   }

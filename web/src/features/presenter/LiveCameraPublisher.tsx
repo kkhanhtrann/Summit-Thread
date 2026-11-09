@@ -187,7 +187,8 @@ export function LiveCameraPublisher({ sessionId, stream, recording, onEnded }: L
 
     const connection = connectLiveMedia(sessionId, 'host', onSocketEvent, (connected) => {
       setSocketConnected(connected);
-      if (!connected && mounted.current) setError('Reconnecting to the room…');
+      // End device capture if signaling is lost instead of claiming an unavailable reconnect
+      if (!connected && mounted.current && !stopRequested.current) void endLiveSession();
     });
     signaling.current = connection.socket;
     startSegment();

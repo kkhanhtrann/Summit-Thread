@@ -343,6 +343,8 @@ export class PrismaRoomRepository
         where: { sessionId: id }
       });
       if (current?.status !== 'ready') throw new RecordingNotReadyError();
+      // Never revive an ended camera room with a delayed heartbeat
+      if (current.sourceType === 'camera' && !current.isPlaying && isPlaying) throw new RecordingNotReadyError();
       if (positionMs > (current.durationMs ?? Math.min(86_400_000, current.playbackPositionMs + Math.max(0, Date.now() - current.playbackUpdatedAt.getTime()) + 2000)) || (current.sourceType === 'camera' && positionMs < current.playbackPositionMs))
         throw new RangeError('Invalid source position');
       // Keep release open at source end until the presenter acknowledges finalization

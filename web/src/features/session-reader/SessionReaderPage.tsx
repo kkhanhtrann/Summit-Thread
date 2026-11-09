@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as 
 import { LoadingIndicator } from '../../shared/ui/LoadingIndicator';
 import { PrivateChatPanel } from '../private-chat/public';
 import { formatThreadUpdateCountdown, useSourceClock, useSessionFeed, type SessionSnapshot } from '../sessions/public';
-import './reader-experience.css';
+import '../../shared/styles/conference-experience.css';
 import { TopicThreadDialog } from './TopicThreadDialog';
 import { visualMomentsForOccurrence } from './visualMoments';
 

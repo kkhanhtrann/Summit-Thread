@@ -70,6 +70,7 @@ describe('PostgreSQL caption release', () => {
     await expect(repository.releaseCaption('CA000001', 'synthetic-camera-caption', 'Synthetic speech', 1000)).resolves.not.toBeNull();
     await expect(repository.releaseCaption('CA000001', 'synthetic-future-caption', 'Synthetic future', 100000)).rejects.toThrow();
     await repository.updatePlayback('CA000001', 2000, false);
+    await expect(repository.updatePlayback('CA000001', 2000, true)).rejects.toThrow();
     expect((await repository.getSnapshot('CA000001')).captions).toHaveLength(1);
     await expect(repository.beginLiveCapture('CA000001', 1)).rejects.toThrow();
   });
