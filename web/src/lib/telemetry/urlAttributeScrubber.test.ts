@@ -5,7 +5,7 @@ import { scrubUrlAttributes } from './urlAttributeScrubber';
 
 describe('scrubUrlAttributes', () => {
   it('removes arbitrary sensitive query, fragment, and URL credentials', () => {
-    const scrubbed = scrubUrlAttributes({ 'url.full': 'https://user:SYNTHETIC_PRIVATE_MARKER@example.com/status?token=SYNTHETIC_PRIVATE_MARKER&source=browser#SYNTHETIC_PRIVATE_MARKER', 'url.query': 'token=SYNTHETIC_PRIVATE_MARKER' });
+    const scrubbed = scrubUrlAttributes({ 'url.full': 'https://user:SYNTHETIC_PRIVATE_MARKER@example.com/status?token=SYNTHETIC_PRIVATE_MARKER&source=browser#SYNTHETIC_PRIVATE_MARKER', 'url.query': 'token=SYNTHETIC_PRIVATE_MARKER', 'url.fragment': 'SYNTHETIC_PRIVATE_MARKER' });
     const url = new URL(scrubbed['url.full']);
 
     expect(JSON.stringify(scrubbed)).not.toContain('SYNTHETIC_PRIVATE_MARKER');
@@ -34,6 +34,7 @@ describe('scrubUrlAttributes', () => {
   it('ignores missing or malformed URL attributes without throwing', () => {
     expect(scrubUrlAttributes({} as UrlAttributeRecord)).toEqual({});
     expect(scrubUrlAttributes({ 'url.full': 'http://[' } as UrlAttributeRecord))
-      .toEqual({ 'url.full': 'http://[' });
+      .toEqual({ 'url.full': 'REDACTED' });
+    expect(scrubUrlAttributes({ 'url.query': 'token=SYNTHETIC_PRIVATE_MARKER', 'url.fragment': 'SYNTHETIC_PRIVATE_MARKER' } as UrlAttributeRecord)).toEqual({});
   });
 });

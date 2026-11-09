@@ -13,7 +13,7 @@ The web app is a Vite and React client of the backend API.
 
 ## Interface and accessibility
 
-- Follow the reading-first context in `.impeccable.md` and the supplied HTML's workflows.
+- Follow the reading-first context in `.impeccable.md` and the agreed feature workflows.
 - Render only session data returned by the backend. Distinguish uploaded playback from the host's live camera feed and make the presenter-created room and attendee link clear
 - Keep attendee media moving while the room thread updates on the presenter-selected interval
 - Keep the reader still while attendees inspect earlier search results; provide a clear action to return to the newest caption.
