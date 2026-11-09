@@ -1,15 +1,15 @@
 .chat-shell, .reader-private-ask, .private-chat-panel {
   /* Map private Ask roles onto the shared brand tokens */
-  --color-paper: var(--st-mist);
-  --color-paper-2: var(--st-teal-50);
-  --color-ink: var(--st-night);
+  --color-paper: var(--st-canvas);
+  --color-paper-2: var(--st-soft);
+  --color-ink: var(--st-ink);
   --color-ink-2: var(--st-ink-2);
   --color-muted: var(--st-muted);
   --color-rule: var(--st-line);
   --color-rule-strong: var(--st-line-strong);
-  --color-accent: var(--st-lagoon);
-  --color-accent-soft: var(--st-teal-50);
-  --color-focus: var(--st-lagoon);
+  --color-accent: var(--st-action);
+  --color-accent-soft: var(--st-soft);
+  --color-focus: var(--st-focus);
   --radius-part: var(--st-radius-chip);
   --dur-short: 220ms;
   --paper: var(--color-paper); --paper-deep: var(--color-paper-2);
@@ -42,7 +42,7 @@
 .chat-message-content { margin: 0; font-size: 1.08rem; line-height: 1.6; white-space: pre-wrap; }
 .chat-suggestions { display: grid; gap: 0.55rem; margin: 1.2rem 0 0; padding: 0; list-style: none; }
 .chat-suggestions button { width: 100%; padding: 0.65rem 0.8rem; border: 1px solid var(--control-border); border-radius: 3px; background: var(--st-surface); cursor: pointer; text-align: left; }
-.chat-suggestions button:hover:not(:disabled) { border-color: var(--accent); background: var(--st-teal-50); transform: translateX(2px); }
+.chat-suggestions button:hover:not(:disabled) { border-color: var(--accent); background: var(--st-soft); transform: translateX(2px); }
 .chat-citations-wrap { margin-top: 0.95rem; }
 .chat-citations-heading { display: flex; align-items: baseline; gap: 0.5rem; margin: 0 0 0.45rem; color: var(--muted); font-size: 0.85rem; font-weight: 700; }
 .chat-citations-heading span { font-size: 0.72rem; font-weight: 550; letter-spacing: 0; text-transform: none; }
@@ -55,7 +55,7 @@
 .chat-form { display: grid; gap: 0.6rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
 .chat-form label { font-weight: 650; }
 .chat-form textarea { width: 100%; min-height: 6rem; padding: 0.75rem; resize: vertical; border: 1px solid var(--control-border); border-radius: 3px; background: var(--st-surface); color: var(--ink); line-height: 1.5; transition: border-color var(--motion-state) var(--ease-out), box-shadow var(--motion-state) var(--ease-out); }
-.chat-form textarea:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(11 95 89 / 18%); outline: none; }
+.chat-form textarea:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(15 118 110 / 28%); outline: none; }
 .chat-form-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: 0.88rem; }
 .chat-form .button { min-width: 6rem; margin-left: auto; }
 .chat-error { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem 1rem; color: var(--st-error); animation: content-enter 220ms var(--ease-out) both; }
@@ -72,20 +72,20 @@
   border-radius: 7px;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 1.4rem 5rem rgb(8 27 30 / 36%);
+  box-shadow: 0 1.4rem 5rem rgb(30 23 18 / 36%);
   opacity: 0;
   transform: translateY(0.8rem) scale(0.99);
   transition: opacity 200ms var(--ease-out), transform 260ms var(--ease-out), display 260ms allow-discrete, overlay 260ms allow-discrete;
 }
 .source-citation-dialog[open] { opacity: 1; transform: translateY(0) scale(1); }
 .source-citation-dialog::backdrop {
-  background-color: rgb(8 27 30 / 62%);
+  background-color: rgb(30 23 18 / 62%);
   backdrop-filter: blur(3px) saturate(0.84);
   transition: background-color 200ms var(--ease-out), backdrop-filter 200ms var(--ease-out), display 200ms allow-discrete, overlay 200ms allow-discrete;
 }
 @starting-style {
   .source-citation-dialog[open] { opacity: 0; transform: translateY(0.8rem) scale(0.99); }
-  .source-citation-dialog[open]::backdrop { background-color: rgb(8 27 30 / 0%); backdrop-filter: blur(0); }
+  .source-citation-dialog[open]::backdrop { background-color: rgb(30 23 18 / 0%); backdrop-filter: blur(0); }
 }
 .source-citation-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: min(82dvh, 48rem); }
 .source-citation-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: clamp(1rem, 2.8vw, 1.6rem) clamp(1rem, 3vw, 1.8rem); border-bottom: 1px solid var(--line); background: color-mix(in oklab, var(--paper-deep) 28%, var(--paper)); }
@@ -186,7 +186,7 @@
   display: block;
   height: 0.9rem;
   border-radius: 2px;
-  background: var(--st-teal-50);
+  background: var(--st-soft);
   animation: loading-pulse 1.2s ease-in-out infinite alternate;
 }
 .loading-lines span:nth-child(1) { width: 96%; }
@@ -628,7 +628,7 @@
   padding: 0.75rem 1rem;
   border: 0;
   border-radius: var(--st-radius-card) var(--st-radius-card) var(--st-radius-chip) var(--st-radius-card);
-  background: var(--st-teal-50);
+  background: var(--st-soft);
 }
 .chat-shell .chat-message-assistant,
 .private-chat-panel .chat-message-assistant {
@@ -652,7 +652,7 @@
 }
 .chat-shell .chat-form textarea:focus-visible,
 .private-chat-panel .chat-form textarea:focus-visible {
-  border-color: var(--st-lagoon);
+  border-color: var(--st-focus);
   box-shadow: var(--st-focus-glow);
 }
 .chat-shell .button,
@@ -661,3 +661,24 @@
 }
 /* Label presenter material citations apart from spoken timestamps */
 .chat-citation-origin { color: var(--accent-dark); font-size: 0.8rem; font-weight: 700; }
+
+/* Component contrast: dark question bubbles, white answers, white header bar */
+.chat-shell .site-header {
+  background: var(--st-bar);
+  border-bottom: 0;
+  box-shadow: none;
+  clip-path: none;
+  /* Paint the bar past the centered header box to both viewport edges */
+  border-image: conic-gradient(var(--st-bar) 0 0) fill 0 / / 0 100vmax;
+}
+.chat-shell .site-header .brand-mark { color: var(--st-on-bar); }
+.chat-shell .site-header :focus-visible { outline-color: var(--st-on-bar); }
+.chat-shell .chat-message-user,
+.private-chat-panel .chat-message-user {
+  background: var(--st-dark);
+  color: var(--st-on-dark);
+}
+.chat-shell .chat-message-user .chat-message-label,
+.private-chat-panel .chat-message-user .chat-message-label { color: var(--st-dim-on-dark); }
+.chat-shell .chat-message-user .chat-message-content,
+.private-chat-panel .chat-message-user .chat-message-content { color: var(--st-on-dark); }

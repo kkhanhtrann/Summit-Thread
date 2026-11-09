@@ -1,56 +1,76 @@
-/* Summit Thread brand tokens, derived from the logo's teal mountain and amber sun
-   Logo teal and amber are decorative on light surfaces; text uses the contrast-checked shades */
+/* Summit Thread tokens: warm sand ground, espresso ink, with the logo's teal and amber as accents
+   No background or text token carries a green or teal tint */
 :root {
-  /* Teal family: logo teal for fills, lagoon shades for text, borders, and buttons */
-  --st-teal-50: #e6faf6;
-  --st-teal-100: #c5f3ea;
-  --st-teal-300: #7ee5d3;
-  --st-teal: #2dd4bf;
-  --st-lagoon: #0b5f59;
-  --st-lagoon-700: #094b47;
-  --st-line-strong: #6e9c98;
+  /* Warm ground and surfaces: sand page, warm white cards */
+  --st-canvas: #fbf7f0;
+  --st-surface: #fffdf9;
+  --st-soft: #f6efe4;
+  --st-soft-2: #efe5d6;
+  --st-line: #d9c8ae;
+  --st-line-soft: #ece2d3;
+  --st-line-strong: #8f7d66;
+  --st-disabled: #e8dece;
 
-  /* Amber family: reserved for "now" — live status, newest caption, current topic */
+  /* Espresso text */
+  --st-ink: #2a221b;
+  --st-ink-2: #4a3e33;
+  --st-muted: #6a5a49;
+
+  /* Actions: espresso buttons; amber is reserved for the main step into a talk */
+  --st-action: #2a221b;
+  --st-action-hover: #4a3e33;
+
+  /* Top bar: coffee brown across the full width */
+  --st-bar: #5a3420;
+  --st-bar-2: #6e4129;
+  --st-on-bar: #fff7ea;
+  --st-dim-on-bar: #f3dec0;
+
+  /* Teal: logo and illustrations only (never a surface or text color) */
+  --st-teal: #2dd4bf;
+  --st-focus: #8a4b00;
+
+  /* Amber: "now" — live status, newest caption, current topic, main call to action */
   --st-amber-50: #fff6db;
   --st-amber-100: #feebb0;
   --st-amber: #fbbf24;
   --st-ember: #8a4b00;
 
-  /* Night and mist: ink, dark media surfaces, and the page ground */
-  --st-night-deep: #081b1e;
-  --st-night: #0e2a2e;
-  --st-night-2: #163c41;
-  --st-ink-2: #28474c;
-  --st-muted: #4a6266;
-  --st-dim-on-night: #8fb3b0;
-  --st-line-on-night: #4f7479;
-  --st-mist: #f2faf9;
-  --st-surface: #ffffff;
-  --st-line: #d5e7e5;
-  --st-line-soft: #e4f1ef;
-  --st-disabled: #dce7e6;
+  /* Warm accents that tell topic threads apart (teal, coral, tangerine, pink); edges and markers only, never text */
+  --st-accent-1: #2dd4bf;
+  --st-accent-2: #fb7185;
+  --st-accent-3: #fb923c;
+  --st-accent-4: #f472b6;
+
+  /* Espresso blocks: media panels, the invite panel, and question bubbles */
+  --st-dark-deep: #1e1712;
+  --st-dark: #2e241c;
+  --st-dark-2: #3d3128;
+  --st-on-dark: #f7f0e6;
+  --st-dim-on-dark: #c9b9a4;
+  --st-line-on-dark: #5c4c3f;
 
   /* Status */
   --st-error: #b42318;
   --st-error-50: #fdecea;
-  --st-success: #11734a;
+  --st-success: #15803d;
 
   /* Type: Bricolage Grotesque for display and identity, Source Sans 3 for reading and UI */
   --st-font-display: 'Bricolage Grotesque Variable', 'Source Sans 3 Variable', system-ui, sans-serif;
   --st-font-body: 'Source Sans 3 Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   /* Shape: rounding follows hierarchy — panels round most, chips least */
-  --st-radius-panel: 28px;
-  --st-radius-card: 18px;
+  --st-radius-panel: 14px;
+  --st-radius-card: 12px;
   --st-radius-control: 12px;
   --st-radius-chip: 8px;
   --st-radius-pill: 999px;
 
-  /* Depth: shadows tinted with night rather than neutral grey */
-  --st-shadow-soft: 0 1px 2px rgb(14 42 46 / 6%), 0 8px 24px -14px rgb(14 42 46 / 22%);
-  --st-shadow-raised: 0 1px 2px rgb(14 42 46 / 8%), 0 18px 40px -18px rgb(14 42 46 / 32%);
-  --st-shadow-dialog: 0 1.4rem 5rem rgb(8 27 30 / 38%);
-  --st-focus-glow: 0 0 0 4px rgb(11 95 89 / 32%);
+  /* Depth: warm espresso-tinted shadows */
+  --st-shadow-soft: 0 1px 2px rgb(46 36 28 / 10%), 0 10px 28px -14px rgb(46 36 28 / 32%);
+  --st-shadow-raised: 0 2px 4px rgb(46 36 28 / 10%), 0 22px 44px -18px rgb(46 36 28 / 40%);
+  --st-shadow-dialog: 0 1.4rem 5rem rgb(30 23 18 / 40%);
+  --st-focus-glow: 0 0 0 4px rgb(138 75 0 / 25%);
 
   /* Motion */
   --st-ease: cubic-bezier(0.2, 0.8, 0.2, 1);

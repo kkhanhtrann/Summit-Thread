@@ -29,7 +29,7 @@ describe('room navigation', () => {
   it('creates a room from a title without capture permission', async () => {
     history.replaceState({}, '', '/presenter');
     render(<App />);
-    fireEvent.change(screen.getByLabelText('Session name'), {
+    fireEvent.change(screen.getByLabelText('Talk title'), {
       target: { value: 'Synthetic fixture talk' }
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create room' }));

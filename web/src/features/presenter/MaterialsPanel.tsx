@@ -15,11 +15,10 @@ const MAX_TITLE_LENGTH = 100;
 
 // Describe a material's processing outcome in plain language
 function describeStatus(material: TalkMaterial): string {
-  if (material.status === 'processing') return 'Processing…';
-  if (material.status === 'empty') return 'No extractable text';
-  if (material.status === 'failed') return 'Couldn’t process';
-  const passages = `${material.passageCount} ${material.passageCount === 1 ? 'passage' : 'passages'}`;
-  return material.pageCount ? `Ready · ${passages} from ${material.pageCount} ${material.pageCount === 1 ? 'page' : 'pages'}` : `Ready · ${passages}`;
+  if (material.status === 'processing') return 'Reading…';
+  if (material.status === 'empty') return 'No text found';
+  if (material.status === 'failed') return 'Couldn’t read this file';
+  return material.pageCount ? `Ready, ${material.pageCount} ${material.pageCount === 1 ? 'page' : 'pages'}` : 'Ready';
 }
 
 // Derive a readable title from an uploaded file name
@@ -124,24 +123,25 @@ export function MaterialsPanel({ sessionId }: { sessionId: string }) {
 
   return (
     <section className="talk-materials" aria-labelledby={headingId}>
-      <h2 id={headingId}>Talk materials</h2>
+      <h2 id={headingId}>Add your slides or notes</h2>
       <p className="talk-materials-note">
-        Add notes or slides. Attendees’ private questions can cite them, labeled as your materials. Topics use them only for wording, never as something you said.
+        Optional. Answers to attendee questions can point to them.
       </p>
 
-      {materials === null && !error ? <p role="status">Loading materials…</p> : materials && materials.length > 0 ? (
+      {materials === null && !error ? <p role="status">Loading…</p> : materials && materials.length > 0 ? (
         <ul className="talk-material-list" aria-label="Talk materials">
           {materials.map((material) => (
             <li key={material.id} className={`talk-material is-${material.status}`}>
               <span className="talk-material-title">{material.title}</span>
-              <span className="talk-material-meta">{material.kind === 'pdf' ? 'PDF' : 'Notes'} · {describeStatus(material)}</span>
+              <span className="talk-material-meta">{material.kind === 'pdf' ? 'PDF' : 'Notes'}</span>
+              <span className="talk-material-status">{describeStatus(material)}</span>
               <button className="text-action" type="button" aria-label={`Remove ${material.title}`} onClick={() => void remove(material)}>
                 Remove
               </button>
             </li>
           ))}
         </ul>
-      ) : materials ? <p className="talk-materials-empty">No materials yet.</p> : null}
+      ) : materials ? <p className="talk-materials-empty">Nothing added yet.</p> : null}
 
       <div className="talk-material-upload">
         <label htmlFor={`${headingId}-pdf`}>PDF slides or handout</label>
@@ -153,7 +153,7 @@ export function MaterialsPanel({ sessionId }: { sessionId: string }) {
           disabled={busy}
           onChange={(event) => void chooseFile(event)}
         />
-        <p className="talk-materials-hint">Up to 25 MiB and 300 pages. Scanned pages without text can’t be read.</p>
+        <p className="talk-materials-hint">PDF up to 25 MB. Scanned images can’t be read.</p>
         {progress !== null && <progress max={1} value={progress} aria-label="PDF upload progress" />}
       </div>
 

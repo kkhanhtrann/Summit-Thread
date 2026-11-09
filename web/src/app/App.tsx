@@ -19,7 +19,7 @@ export function App() {
   };
   if (path === '/ask') {
     const code = new URL(window.location.href).searchParams.get('session')?.trim().toUpperCase();
-    return code && /^[A-F0-9]{8}$/.test(code) ? <PrivateChatPage key={code} sessionId={code} /> : <main className="state-page"><h1>Choose a room</h1><p>Use your room’s private Ask link or enter its code.</p><form action="/ask"><label htmlFor="ask-room">Room code</label><input name="session" id="ask-room" required pattern="[A-Fa-f0-9]{8}" minLength={8} maxLength={8} /><button>Open private Ask</button></form><a href="/">Join a room</a></main>;
+    return code && /^[A-F0-9]{8}$/.test(code) ? <PrivateChatPage key={code} sessionId={code} /> : <main className="state-page"><h1>Choose a room</h1><p>Enter the code from your invite.</p><form action="/ask"><label htmlFor="ask-room">Room code</label><input name="session" id="ask-room" required pattern="[A-Fa-f0-9]{8}" minLength={8} maxLength={8} /><button>Ask privately</button></form><a href="/">Join a room</a></main>;
   }
   const route = /^\/(rooms|presenter)\/([^/]+)\/?$/.exec(path);
   const code = route?.[2]?.trim().toUpperCase();
@@ -43,7 +43,7 @@ export function App() {
       ) : (
         <JoinSessionPage navigate={navigate} />
       )}
-      <footer>Local demo. Anyone with a room code can join that room.</footer>
+      <footer>Anyone with a room code can join that room.</footer>
     </>
   );
 }
@@ -56,10 +56,10 @@ function Room({ code }: { code: string; presenter: boolean }) {
         <p role={error ? 'alert' : 'status'}>
           {error ??
             (connectionState === 'reconnecting'
-              ? 'The API is still connecting. Retrying shortly…'
-              : 'Loading the latest room state.')}
+              ? 'Still connecting. Trying again…'
+              : 'Getting the latest from the talk.')}
         </p>
-        <button onClick={retry}>Retry connection</button>{' '}
+        <button onClick={retry}>Try again</button>{' '}
         <a href="/">Enter another code</a>
       </main>
     );

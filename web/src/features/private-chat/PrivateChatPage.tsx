@@ -45,10 +45,8 @@ function RoomPrivateChat({ sessionId }: { sessionId: string }) {
       </header>
       <main className="chat-main" id="private-chat">
         <header className="chat-heading">
-          <p className="eyebrow">Your private questions</p>
-          <h1>Ask about the talk</h1>
-          <p className="chat-intro">Ask privately about what’s been said so far.</p>
-          {snapshot && <p className="chat-session-title">{snapshot.session.title}</p>}
+            <h1>Ask about the talk</h1>
+            {snapshot && <p className="chat-session-title">{snapshot.session.title}</p>}
         </header>
         {error && (
           <div role="alert" className="chat-error">
@@ -64,7 +62,7 @@ function RoomPrivateChat({ sessionId }: { sessionId: string }) {
         ) : (
           <PrivateChatPanel sessionId={sessionId} snapshot={snapshot} connectionState={error ? 'reconnecting' : 'connected'} onOpenCitation={setCaptionId} />
         )}
-        {caption && <section ref={evidence} tabIndex={-1} className="ask-evidence" aria-label="Released transcript passage"><h2>From the talk · {formatTimestamp(caption.timestampMs)}</h2><blockquote>{caption.text}</blockquote><button onClick={() => setCaptionId(null)}>Close passage</button></section>}
+        {caption && <section ref={evidence} tabIndex={-1} className="ask-evidence" aria-label="Released transcript passage"><h2>From the talk at {formatTimestamp(caption.timestampMs)}</h2><blockquote>{caption.text}</blockquote><button onClick={() => setCaptionId(null)}>Close passage</button></section>}
       </main>
       <footer className="site-footer"><a href={`/rooms/${encodeURIComponent(sessionId)}`}>Return to the talk</a></footer>
     </div>

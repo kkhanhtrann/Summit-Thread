@@ -262,7 +262,7 @@ export function LiveCameraPublisher({ sessionId, stream, recording, onEnded }: L
     <section className="presenter-media-stage live-camera-stage" aria-labelledby="live-camera-title">
       <div className="presenter-media-heading">
         <div>
-          <p className="eyebrow">Your room</p>
+          
           <h2 id="live-camera-title">Live now</h2>
         </div>
         <p className="presenter-media-clock" role="status">

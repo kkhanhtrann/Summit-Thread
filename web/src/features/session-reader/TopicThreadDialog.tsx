@@ -198,7 +198,7 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, visua
                   </header>
                   <p className="dialog-occurrence-note">{activeOccurrence.summary.trim() !== thread.summary.trim()
                     ? activeOccurrence.summary
-                    : 'Transcript passages from this part of the talk appear below.'}</p>
+                    : ''}</p>
                   {activeVisualMoments.length > 0 && (
                     <section className="dialog-visual-moments" aria-labelledby={`${titleId}-visuals`}>
                       <header className="dialog-visual-heading">

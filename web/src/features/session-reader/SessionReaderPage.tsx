@@ -46,34 +46,19 @@ function describeSessionState(
 // Explain whether useful frames have been selected from the video
 function describeVisualMomentState(recording: SessionRecording | undefined, releasedCount: number): string | null {
   if (!recording) return null;
-  if (recording.mediaKind === 'audio') return 'Audio only · no frames';
-  if (recording.status === 'preparing') return 'Video is processing';
+  if (recording.mediaKind === 'audio') return 'Audio only';
+  if (recording.status === 'preparing') return 'Getting the video ready';
   if (recording.status === 'failed') return 'Video unavailable';
-  const selectedFrames = `${releasedCount} ${releasedCount === 1 ? 'frame' : 'frames'} selected`;
-  const skippedWindowCount = recording.visualReviewSkippedWindowCount ?? 0;
-  if (recording.analysisState === 'failed') return 'Couldn’t review the video';
-  if (recording.analysisState === 'analyzing') {
-    return releasedCount > 0 ? `${selectedFrames} · Checking more of the video` : 'Checking the video for useful frames';
-  }
-  if (recording.analysisState === 'complete') {
-    if (releasedCount > 0) return skippedWindowCount > 0
-      ? `${selectedFrames} · Some video couldn’t be checked`
-      : selectedFrames;
-    if (recording.visualReviewSkippedWindowCount === null || recording.visualReviewSkippedWindowCount === undefined) {
-      return 'Video check complete';
-    }
-    return skippedWindowCount > 0
-      ? 'No frames selected · Some video couldn’t be checked'
-      : 'No useful frames selected';
-  }
-  if (releasedCount > 0) return skippedWindowCount > 0
-    ? `${selectedFrames} · Some video couldn’t be checked`
-    : selectedFrames;
-  if (recording.analysisThroughMs > 0) return skippedWindowCount > 0
-    ? 'No frames selected · Some video couldn’t be checked'
-    : 'No useful frames selected yet';
-  if (recording.analysisState === 'waiting') return 'Waiting for the first video update';
-  return 'Video check starts soon';
+  const selectedFrames = `${releasedCount} key ${releasedCount === 1 ? 'slide' : 'slides'}`;
+  // Mention gaps as a short second sentence instead of a joined "A · B" label
+  const gaps = (recording.visualReviewSkippedWindowCount ?? 0) > 0 ? ' Some parts were skipped.' : '';
+  if (recording.analysisState === 'failed') return 'Couldn’t check the video';
+  if (recording.analysisState === 'analyzing') return releasedCount > 0 ? `${selectedFrames} so far` : 'Looking for key slides';
+  if (releasedCount > 0) return `${selectedFrames}${recording.analysisState === 'complete' ? '' : ' so far'}.${gaps}`;
+  // A finished review says so plainly; "yet" is only for reviews still in progress
+  if (recording.analysisState === 'complete') return `No key slides in this talk.${gaps}`;
+  if (recording.analysisThroughMs > 0) return `No key slides yet.${gaps}`;
+  return 'Key slides appear as the talk plays';
 }
 
 // Format talk offsets as readable timestamps
@@ -317,8 +302,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
         <header className="session-heading">
           <div>
             <h1>{snapshot?.session.title ?? (error ? 'Can’t open this room' : 'Joining the room')}</h1>
-            <p className="session-type">Conference talk</p>
-          </div>
+            </div>
           {snapshot && (
             <div className="session-actions">
               <p className="connection-copy" role="status">
@@ -449,7 +433,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                         </div>
                       )}
                       <div className="stream-controls">
-                        <span>{recording.isPlaying ? 'Playing for attendees' : recordingHasEnded ? 'The talk has ended' : recordingHasStarted ? 'Waiting for the presenter to resume' : 'The presenter hasn’t started playback yet'}</span>
+                        <span>{recording.isPlaying ? 'Playing' : recordingHasEnded ? 'The talk has ended' : recordingHasStarted ? 'Waiting for the presenter to resume' : 'The presenter hasn’t started playback yet'}</span>
                         <div className="stream-control-actions">
                           {needsPlaybackTap && <button className="button button-outline" type="button" onClick={() => void followStream()}>Resume playback</button>}
                           <button className="text-action" type="button" onClick={() => {
@@ -502,7 +486,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                     <section className="topic-history topic-milestones" aria-labelledby="topic-history-title">
                       <div className="topic-history-heading">
                         <div>
-                          <h2 id="topic-history-title">Topic milestones</h2>
+                          <h2 id="topic-history-title">Topics</h2>
                         </div>
                         <div className="topic-milestone-heading-meta">
                           <span>{topicThreads.length} {topicThreads.length === 1 ? 'thread' : 'threads'}</span>
@@ -521,8 +505,10 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                           ));
                           const featuredVisualOccurrence = threadVisualOccurrences[0];
                           const featuredVisualMoment = featuredVisualOccurrence?.moment;
+                          // Pick a stable accent from first-appearance order so colors never shift when topics reorder
+                          const accent = snapshot.threads.findIndex((candidate) => candidate.id === thread.id) % 4;
                           return (
-                            <li className={`topic-milestone${thread.id === activeEntry?.thread.id ? ' is-current' : ''}`} key={thread.id}>
+                            <li className={`topic-milestone${thread.id === activeEntry?.thread.id ? ' is-current' : ''}`} data-accent={accent} key={thread.id}>
                               <span className="topic-milestone-marker" aria-hidden="true">{String(topicThreads.length - index).padStart(2, '0')}</span>
                               <button
                                 className="topic-milestone-card"
@@ -534,7 +520,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                               >
                                 <span className="topic-milestone-topline">
                                   <time>{formatTimestamp(firstOccurrence.startedAtMs)}</time>
-                                  {thread.id === activeEntry?.thread.id && <span className="topic-history-status">{recording?.isPlaying ? 'Talking about now' : 'Current topic'}</span>}
+                                  {thread.id === activeEntry?.thread.id && <span className="topic-history-status">{recording?.isPlaying ? 'Now' : 'Current topic'}</span>}
                                   <span className="topic-milestone-open" aria-hidden="true">↗</span>
                                 </span>
                                 {featuredVisualMoment && (
@@ -596,7 +582,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                       <h2>Transcript</h2>
                     </div>
                     <p className="transcript-status" role="status">
-                      {recording?.isPlaying ? 'Waiting for the next transcript lines…' : snapshot.captions.length ? 'Transcript so far' : 'The transcript will appear here when the talk begins.'}
+                      {recording?.isPlaying ? 'Listening…' : snapshot.captions.length ? '' : 'Words appear here once the talk starts.'}
                     </p>
                   </header>
                   {snapshot.captions.length ? (
@@ -610,9 +596,9 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                     </ol>
                   ) : (
                     recording?.isPlaying ? (
-                      <div className="transcript-waiting" aria-busy="true"><LoadingIndicator label="Waiting for the first transcript lines…" /></div>
+                      <div className="transcript-waiting" aria-busy="true"><LoadingIndicator label="Listening for the first words…" /></div>
                     ) : (
-                      <p className="empty-reading">Transcript lines will appear here as the talk plays.</p>
+                      <p className="empty-reading">Words appear here once the talk starts.</p>
                     )
                   )}
                 </section>

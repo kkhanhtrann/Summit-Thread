@@ -10,7 +10,7 @@ export function mergeReleasedMoment(moments: readonly VisualMoment[], incoming: 
 // Describe visual review progress plainly, including honest partial-review diagnostics
 export function describeVisualReview(recording: VisualReviewRecording | null, releasedCount: number): { status: string; partial: string | null } | null {
   if (!recording) return null;
-  if (recording.mediaKind === 'audio') return { status: 'Audio only · no stills to review', partial: null };
+  if (recording.mediaKind === 'audio') return { status: 'Audio only', partial: null };
   if (recording.status === 'preparing') return { status: 'Video is processing', partial: null };
   if (recording.status === 'failed') return { status: 'Video unavailable', partial: null };
 
@@ -23,16 +23,16 @@ export function describeVisualReview(recording: VisualReviewRecording | null, re
   const selected = `${releasedCount} ${releasedCount === 1 ? 'still' : 'stills'} so far`;
 
   if (recording.analysisState === 'analyzing') {
-    return { status: releasedCount > 0 ? `${selected} · Checking the latest finished interval` : 'Checking the latest finished interval for a useful still', partial };
+    return { status: releasedCount > 0 ? `${selected}` : 'Looking for key slides', partial };
   }
-  if (recording.analysisState === 'failed') return { status: 'Visual review hit a problem and will retry · Captions and topics are unaffected', partial };
+  if (recording.analysisState === 'failed') return { status: 'Couldn’t check the video. Trying again.', partial };
   if (recording.analysisState === 'complete') {
-    return { status: releasedCount > 0 ? `${releasedCount} ${releasedCount === 1 ? 'still' : 'stills'} selected` : 'No useful stills were found', partial };
+    return { status: releasedCount > 0 ? `${releasedCount} ${releasedCount === 1 ? 'still' : 'stills'} selected` : 'No key slides in this talk', partial };
   }
   const cadence = recording.sourceType === 'camera'
-    ? 'Stills appear after each captured interval is checked'
-    : `Stills appear after each ${recording.analysisWindowMinutes}-minute interval has played`;
-  return { status: releasedCount > 0 ? `${selected} · ${cadence}` : cadence, partial };
+    ? 'Key slides appear as the talk plays'
+    : 'Key slides appear as the talk plays';
+  return { status: releasedCount > 0 ? selected : cadence, partial };
 }
 
 // Format an original source offset as m:ss or h:mm:ss
