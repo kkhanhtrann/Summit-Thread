@@ -8,7 +8,7 @@ Select a team-owned or explicitly consented recording with clear speech and usef
 
 ## Start and present
 
-1. Run `npm run services:up`, then `npm run db:push` and `npm run dev`. Docker runs in the background; one terminal runs both app watchers. Open http://127.0.0.1:5185/presenter.
+1. Run `npm run services:up`, then `npm run db:deploy` and `npm run dev`. Docker runs in the background; one terminal runs both app watchers. Open http://127.0.0.1:5185/presenter.
 2. Create a room and copy its invitation. Open a second browser/window with the attendee link; leave presenter controls in the first. Streaming-platform intake remains Planned. Camera is an optional explicit capture action; use the uploaded recording for this walkthrough.
 3. Upload the approved recording and select the cadence. Ready means source validation completed, not that the entire recording was analyzed. Start playback; enable attendee sound if autoplay is blocked.
 4. Observe finalized words arriving while media advances. At least three finalized captions can seed an early topic. Later updates follow elapsed source-time boundaries; pausing flushes released speech. Interim speech is not attendee evidence.

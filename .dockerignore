@@ -1,0 +1,11 @@
+.git
+.github
+**/.data
+backend/.env
+**/node_modules
+backend/dist
+web/.env.local
+web/dist
+coverage
+docker-data
+node_modules

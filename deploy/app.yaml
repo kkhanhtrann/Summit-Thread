@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/kkhanhtrann/summit-thread:main
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: API_HOST
+              value: 127.0.0.1
+            - name: API_PORT
+              value: "3110"
+            - name: WEB_ORIGINS
+              value: https://summitthread.cnh.radarhq.io
+            - name: ELASTICSEARCH_URL
+              value: http://elasticsearch:9200
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: app-db-app
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-db-app
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql://$(PGUSER):$(PGPASSWORD)@app-db-rw:5432/summit_thread?schema=public
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-credentials
+                  key: gemini-api-key
+                  optional: true
+            - name: DASH0_BACKEND_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: app-credentials
+                  key: dash0-backend-token
+                  optional: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: recording-data
+              mountPath: /app/.data
+      volumes:
+        - name: recording-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+spec:
+  selector:
+    app: app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

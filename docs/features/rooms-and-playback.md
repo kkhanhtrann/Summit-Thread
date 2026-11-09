@@ -23,7 +23,7 @@ Use Node 24 and the pinned root, backend, and web lockfiles. Start the local Pos
 npm ci
 npm run install:all
 npm run services:up
-npm run db:push
+npm run db:deploy
 npm run dev
 ```
 
