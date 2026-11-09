@@ -62,7 +62,7 @@ const recordings = new RecordingService({
   repository,
   events,
   assets: new LocalRecordingAssetStore(),
-  onPlaybackCommitted: id => { void visualMoments.handlePlaybackProgress(id).catch(() => logger.warn({ event: 'visual_progress_failed' })); },
+  onPlaybackCommitted: id => { if (stopping) return; void visualMoments.handlePlaybackProgress(id).catch(() => logger.warn({ event: 'visual_progress_failed' })); },
   readDuration: readRecordingDuration
 });
 const transcription = new LiveTranscriptionCoordinator({
@@ -85,9 +85,9 @@ async function stop() {
   topicWorker.stop();
   await gateway?.close();
   await indexing.stop();
-  await visualMoments.waitForIdle();
   server?.close();
   server?.closeAllConnections();
+  await visualMoments.waitForIdle();
   await Promise.allSettled([prisma.$disconnect(), search.close()]);
   await shutdownTelemetry();
 }

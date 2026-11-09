@@ -1,3 +1,4 @@
+@scope (:root) to (.reader-design) {
 :root {
   font-family: 'Source Sans 3 Variable', sans-serif;
   color: #23332d;
@@ -596,3 +597,5 @@ button.secondary:disabled {
 .visual-dialog-heading h3{margin:0;font-size:1.2rem}
 .visual-still-large{margin-top:1rem}
 .visual-dialog-meta{color:#4b5a53}
+
+}

@@ -22,6 +22,7 @@ export function App() {
   }
   const route = /^\/(rooms|presenter)\/([^/]+)\/?$/.exec(path);
   const code = route?.[2]?.trim().toUpperCase();
+  if (route?.[1] === 'rooms') return <Room key={`rooms:${code}`} code={code!} presenter={false} />;
   return (
     <>
       <header className="masthead">
@@ -62,6 +63,7 @@ function Room({ code, presenter }: { code: string; presenter: boolean }) {
         <a href="/">Enter another code</a>
       </main>
     );
+  if (!presenter) return <SessionReaderPage key={code} snapshot={snapshot} connectionState={connectionState} error={error} retry={retry} />;
   return (
     <main className="room">
       <div className="room-heading">
