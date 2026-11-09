@@ -18,7 +18,7 @@ The web app is a Vite and React client of the backend API.
 - Keep attendee media moving while the room thread updates on the presenter-selected interval
 - Keep the reader still while attendees inspect earlier search results; provide a clear action to return to the newest caption.
 - Support keyboard operation, visible focus, screen readers, reduced motion, narrow screens, enlarged text, and spacing overrides.
-- Keep attendee questions and transcript content out of telemetry. Scrub search query text from browser request URLs before exporting telemetry.
+- Keep attendee questions and transcript content out of telemetry. Scrub all query values, URL credentials, and fragments, including separately exported URL fields, before exporting telemetry.
 
 ## Comments and checks
 
