@@ -12,7 +12,12 @@ const safeAttributeNames = [
   'durationMs',
   'errorType',
   'host',
-  'port'
+  'port',
+  // Carry content-free visual review states, counts, and attempt numbers
+  'sourceType',
+  'state',
+  'attempt',
+  'count'
 ] as const;
 
 // Export one allowlisted Pino record to OpenTelemetry

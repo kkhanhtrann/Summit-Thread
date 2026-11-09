@@ -11,11 +11,13 @@ import {
   type PreparedRecordingRouteService
 } from './features/sessions/http/preparedRecording.routes';
 import {
+  createVisualMomentRouter,
   RecordingConflictError,
   RecordingNotReadyError,
   RecordingTooLargeError,
   RecordingUnsupportedTypeError,
-  SessionNotFoundError
+  SessionNotFoundError,
+  type VisualMomentService
 } from './features/sessions/public';
 import { createPrivateChatRouter, type PrivateChatRouteService } from './features/private-chat/public';
 import type { ReleasedRoomContent } from './features/sessions/public';
@@ -33,11 +35,16 @@ export interface PrivateAskHttpDependencies {
   service: PrivateChatRouteService;
   context(sessionId: string): Promise<ReleasedRoomContent>;
 }
+// Describe optional features composed by the server once their dependencies exist
+export interface AppFeatures {
+  visualMoments?: Pick<VisualMomentService, 'getReleasedImage' | 'submitLiveWindow'>;
+}
 // Compose validated product routes and operational health endpoints
 export function createApp(
   checkDependencies?: () => Promise<void>,
   services?: ProductServices,
-  privateAsk?: PrivateAskHttpDependencies
+  privateAsk?: PrivateAskHttpDependencies,
+  features: AppFeatures = {}
 ) {
   const app = express();
   app.use(helmet());
@@ -78,6 +85,8 @@ export function createApp(
         }
       });
   });
+  // Mount visual routes first; they answer their own errors without the shared handler
+  if (features.visualMoments) app.use('/api/sessions', createVisualMomentRouter(features.visualMoments));
   if (services) {
     app.use('/api/sessions', createSessionRouter(services.sessions));
     app.use(

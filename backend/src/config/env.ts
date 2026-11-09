@@ -15,7 +15,9 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().trim().optional(),
   GEMINI_TEXT_MODEL: z.string().trim().min(1).default('gemini-3.8-flash'),
   GEMINI_TRANSCRIPTION_MODEL: z.string().trim().min(1).default('gemini-3.5-transcribe'),
-  GEMINI_LIVE_TRANSCRIPTION_MODEL: z.string().trim().min(1).default('gemini-3.5-transcribe-live')
+  GEMINI_LIVE_TRANSCRIPTION_MODEL: z.string().trim().min(1).default('gemini-3.5-transcribe-live'),
+  // Select the multimodal model that reviews isolated elapsed video windows
+  GEMINI_VISUAL_MODEL: z.string().trim().min(1).default('gemini-3.8-flash')
 });
 
 // Parse the environment once before composing runtime services

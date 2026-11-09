@@ -183,6 +183,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{sessionId}/visual-moments/{momentId}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+                momentId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the original still for a released visual moment
+         * @description Returns image bytes only for a moment already released in this room. Unknown, unreleased, and other-room IDs share one 404 response.
+         */
+        get: operations["getVisualMomentImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}/recording/live/windows/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+                index: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit one completed live-camera clip for visual review
+         * @description Accepts clips in capture order. Repeating an already committed index is a no-op; a later index is rejected. Attendee media is not carried by this route.
+         */
+        post: operations["submitLiveVisualWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -252,12 +298,22 @@ export interface components {
             /** Format: date-time */
             playbackUpdatedAt: string;
         };
+        /** @description A released original still. Delivered in room snapshots and visual_moment_released events. */
         VisualMoment: {
             id: string;
+            /** @description Original source time of the frame */
             timestampMs: number;
+            /** @description Short label for what is on screen */
             topicTitle: string;
+            /** @description Alternative text describing the visible content */
             description: string;
             imageUrl: string;
+            /** @description Released caption spoken at or shortly before the still */
+            captionId: string | null;
+            /** @description Topic occurrence of that caption, when topic analysis assigned one */
+            occurrenceId: string | null;
+            /** @description Topic thread of that occurrence */
+            threadId: string | null;
         };
         RecordingResponse: {
             recording: components["schemas"]["SessionRecording"];
@@ -735,6 +791,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    getVisualMomentImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+                momentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Original frame extracted from the room source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            /** @description Visual moment not found, not released, or its image is unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submitLiveVisualWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "video/webm": string;
+                "video/mp4": string;
+                "video/quicktime": string;
+            };
+        };
+        responses: {
+            /** @description Clip reviewed and its window committed */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Source is not a ready live camera or the clip is out of order */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Clip exceeds the local size limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Visual review is temporarily unavailable */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
