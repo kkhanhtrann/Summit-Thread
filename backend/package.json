@@ -1,0 +1,60 @@
+{
+  "name": "summit-thread-backend",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "scripts": {
+    "dev": "node --watch --import tsx --import ./src/platform/telemetry/instrumentation.ts src/server.ts",
+    "build": "npm run prisma:generate && tsc -p tsconfig.json",
+    "typecheck": "npm run prisma:generate && tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json",
+    "start": "node --import ./dist/platform/telemetry/instrumentation.js ./dist/server.js",
+    "test": "vitest run",
+    "prisma:generate": "prisma generate",
+    "db:push": "npm run prisma:generate && prisma db push",
+    "db:reset": "npm run prisma:generate && prisma db push --force-reset --accept-data-loss"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "3.0.142",
+    "@elastic/elasticsearch": "8.19.2",
+    "@google/genai": "2.15.0",
+    "@opentelemetry/api": "1.10.0",
+    "@opentelemetry/auto-instrumentations-node": "0.83.0",
+    "@opentelemetry/exporter-logs-otlp-http": "0.301.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "0.301.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.301.0",
+    "@opentelemetry/resources": "3.1.0",
+    "@opentelemetry/sdk-logs": "3.1.0",
+    "@opentelemetry/sdk-metrics": "3.1.0",
+    "@opentelemetry/sdk-node": "0.301.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "ai": "6.0.324",
+    "dotenv": "17.2.3",
+    "express": "5.2.1",
+    "helmet": "8.3.0",
+    "pg": "8.22.0",
+    "pino": "10.4.0",
+    "ws": "8.22.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "24.13.3",
+    "@types/pg": "8.20.0",
+    "@types/supertest": "6.0.3",
+    "@types/ws": "8.18.1",
+    "prisma": "7.10.1",
+    "supertest": "7.1.4",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "gcp-metadata": {
+      "gaxios": "7.3.1"
+    }
+  }
+}

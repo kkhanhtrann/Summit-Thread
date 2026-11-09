@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SearchIndexOperation {
+  index_caption
+  delete_session
+}
+
+model ConferenceSession {
+  id                   String            @id
+  title                String
+  eventName            String
+  speakerName          String
+  contentLabel         String
+  // Let reconnecting SSE clients reject stale events
+  revision             Int               @default(0)
+  // Preserve the next attendee-visible caption sequence
+  releasedCount        Int               @default(0)
+  // Resume topic analysis from the next caption after this cursor
+  topicAnalysisCursor  Int               @default(0)
+  // Capture all finalized captions requested by elapsed interval updates
+  topicAnalysisRequestedThroughSequence Int @default(0)
+  // Keep retries attached to the same complete caption range
+  topicAnalysisAttemptThroughSequence Int?
+  // Bound repeated failures for the current unreconciled topic batch
+  topicAnalysisFailureCount Int          @default(0)
+  // Delay the next analysis attempt after a provider or validation failure
+  topicAnalysisRetryAt DateTime?
+  // Tell attendees when some spoken moments remain outside topic threads
+  topicAnalysisSkippedCaptionCount Int   @default(0)
+  // Keep the active thread identity stable while it evolves
+  currentTopicThreadId String?
+  currentOccurrenceId  String?
+  // Refresh attendee question prompts with each analyzed topic batch
+  suggestedQuestions   String[]          @default([])
+  // Pause unfinished room capture after a backend restart
+  isLive               Boolean           @default(false)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  captions             CaptionSegment[]
+  searchIndexJobs      SearchIndexJob[]
+  topicThreads         TopicThread[]
+  topicOccurrences     TopicOccurrence[]
+  recording            PreparedRecording?
+}
+
+enum PreparedRecordingStatus {
+  preparing
+  ready
+  failed
+}
+
+enum SessionRecordingKind {
+  audio
+  video
+}
+
+enum SessionRecordingSource {
+  upload
+  camera
+}
+
+enum RecordingPreparationStage {
+  uploading
+}
+
+enum RecordingAnalysisState {
+  waiting
+  analyzing
+  ready
+  failed
+  complete
+}
+
+model PreparedRecording {
+  sessionId                 String                   @id
+  sourceType                SessionRecordingSource  @default(upload)
+  status                    PreparedRecordingStatus @default(preparing)
+  preparationStage          RecordingPreparationStage?
+  mediaKind                 SessionRecordingKind
+  mimeType                  String
+  durationMs                Int?
+  playbackPositionMs        Int                      @default(0)
+  isPlaying                 Boolean                  @default(false)
+  analysisWindowMinutes     Int                      @default(5)
+  analysisWindowCount       Int                      @default(0)
+  // Preserve unknown skip history for recordings created before review diagnostics
+  visualReviewSkippedWindowCount Int?
+  analysisThroughMs         Int                      @default(0)
+  analysisState             RecordingAnalysisState   @default(waiting)
+  releasedVisualMomentCount Int                      @default(0)
+  visualMoments             Json                     @default("[]")
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  session                   ConferenceSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model CaptionSegment {
+  id                String            @id
+  sessionId         String
+  sequence          Int
+  timestampMs       Int
+  text              String
+  topicOccurrenceId String?
+  releasedAt        DateTime          @default(now())
+  session           ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  searchJobs        SearchIndexJob[]
+  topicOccurrence   TopicOccurrence?  @relation(fields: [topicOccurrenceId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId, sequence])
+}
+
+// Preserve a stable topic identity when a talk returns to an earlier subject
+model TopicThread {
+  id          String            @id
+  sessionId   String
+  title       String
+  summary     String
+  // Retain the released evidence supporting the cumulative thread summary
+  evidenceCaptionIds String[] @default([])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  session     ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  occurrences TopicOccurrence[]
+
+  @@unique([sessionId, id])
+  @@index([sessionId, updatedAt])
+}
+
+// Record each visit to a topic so attendees can follow and revisit its moments
+model TopicOccurrence {
+  id                 String            @id
+  sessionId          String
+  threadId           String
+  ordinal            Int
+  summary            String
+  evidenceCaptionIds String[]
+  startedSequence    Int
+  endedSequence      Int?
+  startedAtMs        Int
+  endedAtMs          Int?
+  session            ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  thread             TopicThread       @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  captions           CaptionSegment[]
+
+  @@unique([sessionId, ordinal])
+  @@index([sessionId, startedSequence])
+  @@index([threadId, ordinal])
+}
+
+// Retry Elasticsearch writes while PostgreSQL remains the source of truth
+model SearchIndexJob {
+  id        String               @id
+  operation SearchIndexOperation
+  sessionId String
+  // Leave empty for jobs that remove an entire room from search
+  captionId String?
+  createdAt DateTime             @default(now())
+  session   ConferenceSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  caption   CaptionSegment?      @relation(fields: [captionId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}

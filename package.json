@@ -1,0 +1,25 @@
+{
+  "name": "summit-thread",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "scripts": {
+    "install:all": "npm --prefix backend ci --no-fund && npm --prefix web ci --no-fund",
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix web run dev",
+    "services:up": "docker compose up -d --wait",
+    "services:down": "docker compose down",
+    "services:logs": "docker compose logs -f postgres elasticsearch",
+    "db:push": "npm --prefix backend run db:push",
+    "db:reset": "npm --prefix backend run db:reset",
+    "contracts:generate": "npm --prefix web run contracts:generate",
+    "typecheck": "npm run contracts:generate && npm --prefix backend run typecheck && npm --prefix web run typecheck",
+    "test:boundaries": "node --test client-boundaries.test.mjs",
+    "test": "npm run test:boundaries && npm --prefix backend test && npm --prefix web test",
+    "build": "npm run contracts:generate && npm --prefix backend run build && npm --prefix web run build",
+    "check": "npm run typecheck && npm test && npm run build"
+  }
+}
