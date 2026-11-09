@@ -1,15 +1,22 @@
 # Radar Cloud deployment
 
-The public `main` branch is deployed to the team-owned `summitthread` cluster through
-Argo CD. The platform routes `https://summitthread.cnh.radarhq.io` to the
+Argo CD watches the public `main` branch in the team-owned `summitthread` cluster.
+The image revision is pinned separately in `deploy/kustomization.yaml`; a Git sync
+alone does not prove that a new image was published or that workloads are healthy.
+The platform routes `https://summitthread.cnh.radarhq.io` to the
 `team-summitthread/app` Service on port 80.
 
 ## One-time setup
 
-1. Keep the GitHub repository public so the cluster can read it and the GHCR image
-   can be made public.
-2. Enable GitHub Actions and wait for **Deploy to Radar** to publish the first image.
-3. In GitHub Packages, open `summit-thread` and set its visibility to **Public**.
+1. Keep the GitHub repository public so the cluster can read it.
+2. Enable GitHub Actions. In repository **Settings → Actions → General**, enable
+   **Allow GitHub Actions to create and approve pull requests**.
+3. A package administrator must open the `summit-thread` GitHub package settings,
+   keep its visibility **Public**, and grant the `Summit-Thread` repository **Write**
+   access under **Manage Actions access**. A public image can be downloaded without
+   granting the workflow permission to upload new versions. Linking an existing
+   package to a repository does not automatically enable permission inheritance.
+   See [GitHub's package access documentation](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility#ensuring-workflow-access-to-your-package).
 4. In Radar Cloud, apply [`argocd/application.yaml`](../argocd/application.yaml)
    to the `summitthread` cluster through the connected agent.
 5. In Radar Cloud, create the optional `app-credentials` Secret in namespace
@@ -24,22 +31,78 @@ participant content.
 
 ## Release flow
 
-Push to `main`. The workflow builds the image, publishes both the commit SHA and
-`main` tags, and opens a deployment pull request that pins the commit SHA in
+Merge reviewed changes to `main`. The workflow builds the image, publishes both
+commit SHA and `main` tags, and opens a deployment pull request that pins the SHA in
 `deploy/kustomization.yaml`. Merge that deployment PR, and Argo CD then syncs
-that revision. The application has one replica because uploaded recordings
-use a pod-local volume, a readiness check backed by
-PostgreSQL and Elasticsearch, and a liveness check that does not require either
-dependency.
+that revision. The application has one replica because uploaded recordings use a
+pod-local volume, a readiness check backed by PostgreSQL and Elasticsearch, and a
+liveness check that does not require either dependency. A startup probe allows up
+to five minutes for migrations and process startup before liveness checks can
+restart the container. CI builds the actual container and verifies nginx, writable
+recording storage, FFmpeg clipping, and both system and bundled FFprobe binaries
+for images built after this fix. The recovered image predates that validation.
 
-Before using this release flow, add a repository secret named `DEPLOY_PR_TOKEN`
-containing a fine-grained GitHub token with repository Contents read/write and
-Pull requests read/write access. A token-backed PR is required because GitHub
-does not start required pull-request workflows for pull requests created with
-the default `GITHUB_TOKEN`. The repository setting **Allow GitHub Actions to
-create and approve pull requests** must also be enabled.
+The workflow uses the repository's short-lived `GITHUB_TOKEN` by default. On its
+deployment PR, select **Approve workflows to run** if GitHub holds CI for approval,
+then wait for required checks and team review before merging. GitHub documents
+this approval flow for [PRs created with `GITHUB_TOKEN`](https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflow-runs).
+An optional `DEPLOY_PR_TOKEN` with repository Contents and Pull requests read/write
+can start PR workflows without that approval step; no personal token is required
+for the default flow. Do not bypass required checks or push directly to `main`.
+
+After an administrator repairs package permissions, rerun a failed **Deploy to
+Radar** job, or use **Run workflow** on `main`. Manual runs on other branches are
+skipped. If Actions cannot open PRs, the repository administrator must enable the
+setting above; the already-published SHA can also be pinned on a normal reviewed
+branch without changing branch protection.
+
+## Recovery and verification
+
+For `denied: permission_denied: write_package`, repair **Manage Actions access** on
+the existing package. Increasing workflow YAML permissions or making the package
+public does not repair a missing package grant. The source label in the Dockerfile
+associates newly published images with their source; it does not repair existing
+package permissions retroactively.
+
+If Elasticsearch still crashes with `AccessDeniedException` after a security-context
+fix, compare `elasticsearch-0` with the StatefulSet's current template. An unready
+pod on an older controller revision can stall an ordered StatefulSet update.
+After verifying that the corrected template is synced, replace only that failed
+pod through Radar. Keep the StatefulSet, `data-elasticsearch-0` PVC, database, and
+namespace. Never delete a PVC or reset the database to recover a pod rollout.
+
+Verify all of the following after a release:
+
+```sh
+curl --fail https://summitthread.cnh.radarhq.io/
+curl --fail https://summitthread.cnh.radarhq.io/presenter
+curl --fail https://summitthread.cnh.radarhq.io/api/health/live
+curl --fail https://summitthread.cnh.radarhq.io/api/health/ready
+```
+
+In Radar, confirm Argo CD is **Synced / Healthy**, the app Deployment has one
+updated ready replica, PostgreSQL is ready, Elasticsearch is ready, and the app
+pod uses the expected immutable image. The initial Radar starter container can
+be ready while serving a placeholder, so a pod-ready count alone is insufficient.
+
+On November 9, 2026, replacing the stale Elasticsearch pod allowed the application
+to replace the starter container. Public frontend and backend readiness checks
+then passed. The recovery used the existing public image from commit
+`81d0e9686f407b86aea4e2a4328b08bb92039a05`.
+After the package administrator confirmed repository Admin access, a workflow
+retry successfully published `9a9322535b38425c0db5eab8ac63c856be3db317`. The app was
+then rolled onto that image, and the baseline pin was advanced to match it.
+The old workflow subsequently stopped at its mandatory `DEPLOY_PR_TOKEN` check;
+this branch removes that requirement. AI provider calls were not verified.
+
+The recovered `9a93225` image does **not** contain system FFmpeg/FFprobe. Visual
+clipping is unavailable on that image even though application readiness passes.
+After this fix merges, wait for its new image to publish, then review and merge
+the generated deployment-pin PR to release the media tools. The baseline pin
+deliberately names an existing, verified image; do not pin an unpublished SHA or
+treat merging the Dockerfile change alone as a completed media-tool rollout.
 
 Recordings use an ephemeral pod volume and are not a durable production media
 store. This deployment is a hackathon environment, not an authenticated
-production boundary. Recreate the recording or reset the dedicated database after
-an app reschedule.
+production boundary. Recreate a recording after an app reschedule; retain database
+records unless the team explicitly authorizes a dedicated data reset.

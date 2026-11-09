@@ -8,4 +8,5 @@ resources:
   - app.yaml
 images:
   - name: ghcr.io/kkhanhtrann/summit-thread
-    newTag: main
+    # Keep the recovered image until the post-merge deployment PR pins the FFmpeg-enabled build
+    newTag: 9a9322535b38425c0db5eab8ac63c856be3db317
