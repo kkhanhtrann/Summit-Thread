@@ -3,6 +3,7 @@ import { JoinSessionPage, useSessionFeed } from '../features/sessions/public';
 import { PresenterPage } from '../features/presenter/public';
 import { PrivateChatPage } from '../features/private-chat/public';
 import { SessionReaderPage } from '../features/session-reader/public';
+import { BrandMark } from '../shared/ui/BrandMark';
 
 // Follow browser history and remount all private room state when the route changes
 export function App() {
@@ -18,7 +19,7 @@ export function App() {
   };
   if (path === '/ask') {
     const code = new URL(window.location.href).searchParams.get('session')?.trim().toUpperCase();
-    return code && /^[A-F0-9]{8}$/.test(code) ? <PrivateChatPage key={code} sessionId={code} /> : <main><h1>Choose a room</h1><p>Use your room’s private Ask link or enter its code.</p><form action="/ask"><label htmlFor="ask-room">Room code</label><input name="session" id="ask-room" required pattern="[A-Fa-f0-9]{8}" minLength={8} maxLength={8} /><button>Open private Ask</button></form><a href="/">Join a room</a></main>;
+    return code && /^[A-F0-9]{8}$/.test(code) ? <PrivateChatPage key={code} sessionId={code} /> : <main className="state-page"><h1>Choose a room</h1><p>Use your room’s private Ask link or enter its code.</p><form action="/ask"><label htmlFor="ask-room">Room code</label><input name="session" id="ask-room" required pattern="[A-Fa-f0-9]{8}" minLength={8} maxLength={8} /><button>Open private Ask</button></form><a href="/">Join a room</a></main>;
   }
   const route = /^\/(rooms|presenter)\/([^/]+)\/?$/.exec(path);
   const code = route?.[2]?.trim().toUpperCase();
@@ -27,7 +28,7 @@ export function App() {
   return (
     <>
       <header className="masthead">
-        <a href="/">Summit Thread</a>
+        <BrandMark />
         <nav aria-label="Main">
           <a href="/">Join a room</a>
           <a href="/presenter">Present a talk</a>
@@ -42,7 +43,7 @@ export function App() {
       ) : (
         <JoinSessionPage navigate={navigate} />
       )}
-      <footer>Local conference rooms · Recording playback</footer>
+      <footer>Local demo. Anyone with a room code can join that room.</footer>
     </>
   );
 }
@@ -50,7 +51,7 @@ function Room({ code }: { code: string; presenter: boolean }) {
   const { snapshot, connectionState, error, retry } = useSessionFeed(code);
   if (!snapshot)
     return (
-      <main>
+      <main className="state-page">
         <h1>{error ? 'Room unavailable' : 'Opening your room…'}</h1>
         <p role={error ? 'alert' : 'status'}>
           {error ??

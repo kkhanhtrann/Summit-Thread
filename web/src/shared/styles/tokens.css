@@ -1,0 +1,59 @@
+/* Summit Thread brand tokens, derived from the logo's teal mountain and amber sun
+   Logo teal and amber are decorative on light surfaces; text uses the contrast-checked shades */
+:root {
+  /* Teal family: logo teal for fills, lagoon shades for text, borders, and buttons */
+  --st-teal-50: #e6faf6;
+  --st-teal-100: #c5f3ea;
+  --st-teal-300: #7ee5d3;
+  --st-teal: #2dd4bf;
+  --st-lagoon: #0b5f59;
+  --st-lagoon-700: #094b47;
+  --st-line-strong: #6e9c98;
+
+  /* Amber family: reserved for "now" — live status, newest caption, current topic */
+  --st-amber-50: #fff6db;
+  --st-amber-100: #feebb0;
+  --st-amber: #fbbf24;
+  --st-ember: #8a4b00;
+
+  /* Night and mist: ink, dark media surfaces, and the page ground */
+  --st-night-deep: #081b1e;
+  --st-night: #0e2a2e;
+  --st-night-2: #163c41;
+  --st-ink-2: #28474c;
+  --st-muted: #4a6266;
+  --st-dim-on-night: #8fb3b0;
+  --st-line-on-night: #4f7479;
+  --st-mist: #f2faf9;
+  --st-surface: #ffffff;
+  --st-line: #d5e7e5;
+  --st-line-soft: #e4f1ef;
+  --st-disabled: #dce7e6;
+
+  /* Status */
+  --st-error: #b42318;
+  --st-error-50: #fdecea;
+  --st-success: #11734a;
+
+  /* Type: Bricolage Grotesque for display and identity, Source Sans 3 for reading and UI */
+  --st-font-display: 'Bricolage Grotesque Variable', 'Source Sans 3 Variable', system-ui, sans-serif;
+  --st-font-body: 'Source Sans 3 Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Shape: rounding follows hierarchy — panels round most, chips least */
+  --st-radius-panel: 28px;
+  --st-radius-card: 18px;
+  --st-radius-control: 12px;
+  --st-radius-chip: 8px;
+  --st-radius-pill: 999px;
+
+  /* Depth: shadows tinted with night rather than neutral grey */
+  --st-shadow-soft: 0 1px 2px rgb(14 42 46 / 6%), 0 8px 24px -14px rgb(14 42 46 / 22%);
+  --st-shadow-raised: 0 1px 2px rgb(14 42 46 / 8%), 0 18px 40px -18px rgb(14 42 46 / 32%);
+  --st-shadow-dialog: 0 1.4rem 5rem rgb(8 27 30 / 38%);
+  --st-focus-glow: 0 0 0 4px rgb(11 95 89 / 32%);
+
+  /* Motion */
+  --st-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --st-dur-fast: 140ms;
+  --st-dur: 240ms;
+}
