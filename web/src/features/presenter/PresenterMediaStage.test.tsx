@@ -142,3 +142,11 @@ it('keeps the changing source clock outside the connection announcement', () => 
   expect(screen.getByRole('status').textContent).not.toContain('Source');
   expect(screen.getByText(/Source 0:00/)).toBeInTheDocument();
 });
+it('commits the exact validated duration at source end despite browser rounding', async () => {
+  render(<PresenterMediaStage sessionId="AB12CD34" recording={recording} />);
+  const player = screen.getByLabelText('Talk video player') as HTMLVideoElement;
+  player.currentTime = 59.9998;
+  Object.defineProperty(player, 'ended', { value: true });
+  fireEvent.ended(player);
+  await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith('AB12CD34', 60000, false));
+});

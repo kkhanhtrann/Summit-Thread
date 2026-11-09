@@ -4,7 +4,7 @@
 
 ## Current implementation
 
-The local app supports shared uploaded-recording playback, continuous finalized speech, evolving topic threads, catch-up navigation, elapsed-window original stills, and private Elasticsearch-backed answers with transcript citations. Camera and streaming-platform intake remain visibly planned. PostgreSQL owns released state; Elasticsearch is rebuildable. Express owns backend contracts/providers and React uses generated API types.
+The local app supports shared uploaded-recording playback, continuous finalized speech, evolving topic threads, catch-up navigation, elapsed-window original stills, and private Elasticsearch-backed answers with transcript citations. Camera intake is available through a presenter action with browser camera/microphone permission; attendee video uses a direct WebRTC connection. Streaming-platform intake remains visibly planned. Camera hardware verification is pending. PostgreSQL owns released state; Elasticsearch is rebuildable. Express owns backend contracts/providers and React uses generated API types.
 
 ## Run locally
 

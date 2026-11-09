@@ -49,6 +49,7 @@ export function attachLiveTranscriptionWebSocket(
     void promise.finally(() => pending.delete(promise)).catch(() => undefined);
   };
   const upgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+    if (!(req.url ?? '').startsWith('/api/live/')) return;
     const id = /^\/api\/live\/([A-F0-9]{8})\/transcription$/.exec(
       (req.url ?? '').split('?')[0]!
     )?.[1];

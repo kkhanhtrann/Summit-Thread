@@ -91,3 +91,31 @@ export function subscribeSession(
     onConnectionChange
   );
 }
+
+// Start a camera room with an independent thread update interval
+export function startLiveCapture(sessionId: string, analysisWindowMinutes: number): Promise<{ recording: SessionRecording }> {
+  return requestJson(`/api/sessions/${encodeURIComponent(sessionId)}/recording/live/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ analysisWindowMinutes })
+  });
+}
+
+// Upload one camera copy while its WebRTC attendee stream keeps running
+export function uploadLiveWindow(
+  sessionId: string,
+  index: number,
+  media: Blob
+): Promise<{ recording: SessionRecording }> {
+  return uploadBinary(
+    `/api/sessions/${encodeURIComponent(sessionId)}/recording/live/windows/${index}`,
+    media,
+    () => undefined,
+    { 'X-Live-Window-Index': String(index) }
+  );
+}
+
+// End the live camera room after its final analysis window is sent
+export function stopLiveCapture(sessionId: string): Promise<{ recording: SessionRecording }> {
+  return requestJson(`/api/sessions/${encodeURIComponent(sessionId)}/recording/live/stop`, { method: 'POST' });
+}

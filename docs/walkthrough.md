@@ -9,7 +9,7 @@ Select a team-owned or explicitly consented recording with clear speech and usef
 ## Start and present
 
 1. Run `npm run services:up`, then `npm run db:push` and `npm run dev`. Docker runs in the background; one terminal runs both app watchers. Open http://127.0.0.1:5185/presenter.
-2. Create a room and copy its invitation. Open a second browser/window with the attendee link; leave presenter controls in the first. Camera and platform controls must remain labeled Planned.
+2. Create a room and copy its invitation. Open a second browser/window with the attendee link; leave presenter controls in the first. Streaming-platform intake remains Planned. Camera is an optional explicit capture action; use the uploaded recording for this walkthrough.
 3. Upload the approved recording and select the cadence. Ready means source validation completed, not that the entire recording was analyzed. Start playback; enable attendee sound if autoplay is blocked.
 4. Observe finalized words arriving while media advances. At least three finalized captions can seed an early topic. Later updates follow elapsed source-time boundaries; pausing flushes released speech. Interim speech is not attendee evidence.
 5. Keep playback running across a complete video interval. Observe review status and, when useful, an original timestamped still in On screen. Zero stills is a valid provider result; skipped/failed review must be reported honestly.
@@ -38,4 +38,4 @@ Record the functioning application window only, with notifications/account tabs 
 
 ## Evidence and remaining work
 
-See development-tools.md and feature guides for dated observations and PR links. Issue #5 verified real recording transcription, topics and cited Ask with Dash0 counts. Issue #6 connects elapsed visual review to playback, released snapshots and the gallery; final real-provider visual, complete two-browser recording, accessibility matrix and controlled service-outage observations must be recorded before final acceptance. Authenticated Dash0 MCP reading remains unverified where the running tool session does not expose that connection; signed-in Agent0 UI is a separate verified path.
+See development-tools.md and feature guides for dated observations and PR links. Issue #5 verified real recording transcription, topics and cited Ask with Dash0 counts. Issue #6 connects elapsed visual review to playback, released snapshots and the gallery; the controlled search interruption and recovery were verified in Brave and Dash0. Real-provider visual output recovered after the token-budget fix. Integrated still display, the complete recorded video artifact, the full manual accessibility matrix and post-change telemetry export checks remain verification limits. Camera hardware was deliberately not activated at the user’s request. Authenticated Dash0 MCP reading remains unverified where the running tool session does not expose that connection; signed-in Agent0 UI is a separate verified path.

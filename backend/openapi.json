@@ -602,6 +602,103 @@
           }
         }
       }
+    },
+    "/sessions/{sessionId}/recording/live/start": {
+      "post": {
+        "operationId": "startLiveCapture",
+        "summary": "Start a fresh camera source",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Committed camera source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "recording"
+                  ],
+                  "properties": {
+                    "recording": {
+                      "$ref": "#/components/schemas/SessionRecording"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid room or cadence"
+          },
+          "409": {
+            "description": "Source conflict or unavailable"
+          },
+          "503": {
+            "description": "Temporarily unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "analysisWindowMinutes"
+                ],
+                "properties": {
+                  "analysisWindowMinutes": {
+                    "type": "integer",
+                    "enum": [
+                      1,
+                      3,
+                      5,
+                      10
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/recording/live/stop": {
+      "post": {
+        "operationId": "stopLiveCapture",
+        "summary": "End camera capture after speech finalization",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Committed camera source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "recording"
+                  ],
+                  "properties": {
+                    "recording": {
+                      "$ref": "#/components/schemas/SessionRecording"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid room or cadence"
+          },
+          "409": {
+            "description": "Source conflict or unavailable"
+          },
+          "503": {
+            "description": "Temporarily unavailable"
+          }
+        }
+      }
     }
   },
   "components": {

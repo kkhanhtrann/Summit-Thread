@@ -1,3 +1,5 @@
+import { VisualMomentGallery } from '../visual-moments/public';
+import { LiveCameraViewer } from './LiveCameraViewer';
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { LoadingIndicator } from '../../shared/ui/LoadingIndicator';
@@ -85,6 +87,13 @@ function formatTimestamp(timestampMs: number): string {
 }
 
 // Keep the attendee media close to the presenter's shared playback clock
+// Project the committed source clock when media becomes ready after buffering
+function currentPlaybackPosition(recording: NonNullable<SessionRecording>): number {
+  const elapsed = recording.isPlaying ? Math.max(0, Date.now() - Date.parse(recording.playbackUpdatedAt)) : 0;
+  const position = recording.playbackPositionMs + elapsed;
+  return recording.durationMs === null ? position : Math.min(position, recording.durationMs);
+}
+
 function synchronizeAttendeeMedia(media: HTMLMediaElement, positionMs: number, isPlaying: boolean): void {
   const targetSeconds = Math.max(0, positionMs / 1_000);
   // Ignore small drift so clock updates do not make attendee playback jump
@@ -117,6 +126,8 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
   const linkedCaptionId = new URLSearchParams(window.location.search).get('caption');
   const occurrenceEntries = snapshot?.threads.flatMap((thread) => thread.occurrences.map((occurrence) => ({ thread, occurrence }))) ?? [];
   const allTopicOccurrences = occurrenceEntries.map(({ occurrence }) => occurrence);
+  const assignedMomentIds = new Set(allTopicOccurrences.flatMap(occurrence => visualMomentsForOccurrence(occurrence, snapshot.visualMoments, allTopicOccurrences).map(moment => moment.id)));
+  const unassignedMoments = snapshot.visualMoments.filter(moment => !assignedMomentIds.has(moment.id));
   // Fall back to the newest occurrence while a snapshot has not identified the active one
   const activeEntry = occurrenceEntries.find(({ occurrence }) => occurrence.id === snapshot?.activeOccurrenceId)
     ?? occurrenceEntries.at(-1)
@@ -191,13 +202,13 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
 
   useEffect(() => {
     if (!media.current || !recording || recording.status !== 'ready') return;
-    synchronizeAttendeeMedia(media.current, recording.playbackPositionMs, recording.isPlaying);
-  }, [recording?.isPlaying, recording?.playbackPositionMs, recording?.status, recording?.mediaUrl]);
+    synchronizeAttendeeMedia(media.current, currentPlaybackPosition(recording), recording.isPlaying);
+  }, [recording?.isPlaying, recording?.playbackPositionMs, recording?.status, recording?.mediaUrl, recording?.playbackUpdatedAt]);
 
   // Align the attendee after browser metadata unlocks the media timeline
   const syncAttendeePlayback = () => {
     if (!media.current || !recording || recording.status !== 'ready') return;
-    synchronizeAttendeeMedia(media.current, recording.playbackPositionMs, recording.isPlaying);
+    synchronizeAttendeeMedia(media.current, currentPlaybackPosition(recording), recording.isPlaying);
   };
 
   const returnToNow = () => {
@@ -383,7 +394,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                     </div>
                   </div>
                   {recording?.sourceType === 'camera' && recording.isPlaying ? (
-                    <p className="stream-placeholder">Camera intake is planned.</p>
+                    <LiveCameraViewer sessionId={sessionId} />
                   ) : recording?.sourceType === 'camera' ? (
                     <p className="stream-placeholder">This live session has ended. Ask the presenter for a new room to join another talk.</p>
                   ) : recording?.status === 'preparing' ? (
@@ -471,6 +482,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                     {isReadingEarlier && <button className="text-action" type="button" onClick={returnToNow}>Back to current topic</button>}
                   </div>
 
+                  {unassignedMoments.length > 0 && <VisualMomentGallery moments={unassignedMoments} recording={recording ?? null} onOpenSpokenMoment={openAskCitation} onOpenTopic={openTopicThread} />}
                   {snapshot.topicAnalysisSkippedCaptionCount > 0 && <p className="topic-note" role="note">{snapshot.topicAnalysisSkippedCaptionCount} {snapshot.topicAnalysisSkippedCaptionCount === 1 ? 'transcript line isn’t' : 'transcript lines aren’t'} grouped into a topic yet. You can still read them in the transcript.</p>}
                   {topicThreads.length > 0 ? (
                     <section className="topic-history topic-milestones" aria-labelledby="topic-history-title">

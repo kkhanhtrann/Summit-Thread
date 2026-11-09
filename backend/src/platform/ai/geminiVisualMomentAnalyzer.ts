@@ -189,7 +189,8 @@ export function createGeminiVisualMomentAnalyzer(
             responseMimeType: 'application/json',
             responseJsonSchema,
             temperature: 0,
-            maxOutputTokens: 400
+            // Reserve reasoning tokens alongside the bounded JSON answer
+            maxOutputTokens: 8_192
           }
         });
         if (typeof response.text !== 'string' || response.text.length === 0) throw new VisualProviderError('invalid_output');

@@ -10,3 +10,7 @@ export { createVisualMomentRouter } from './http/visualMoments.routes';
 export { ReleasedContentRepository } from './persistence/releasedContent.repository';
 export { SessionIndexingWorker } from './application/sessionIndexingWorker';
 export type { ReleasedRoomContent, IndexQueueRepository } from './contracts/releasedContent';
+
+// Expose camera lifecycle and room signaling to server composition
+export { CameraService } from './application/cameraService';
+export { attachLiveMediaWebSocket } from './http/liveMediaWebSocket';

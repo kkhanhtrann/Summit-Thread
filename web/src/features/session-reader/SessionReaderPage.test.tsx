@@ -254,3 +254,19 @@ describe('topic reading', () => {
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
 });
+
+it('resynchronizes buffered media to elapsed presenter time instead of the stale snapshot', () => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(20000);
+  render(<SessionReaderPage snapshot={{ ...snapshot, recording: { ...snapshot.recording!, playbackPositionMs: 1000, playbackUpdatedAt: new Date(2000).toISOString() } }} />);
+  const player = screen.getByLabelText('Shared talk video') as HTMLVideoElement;
+  fireEvent.canPlay(player);
+  expect(player.currentTime).toBe(19);
+  now.mockRestore();
+  cleanup();
+});
+
+it('shows released stills before any topic has been produced', () => {
+  render(<SessionReaderPage snapshot={{ ...snapshot, visualMoments: [{ id: 'moment-0000', timestampMs: 1000, topicTitle: 'Synthetic chart', description: 'Synthetic chart description', imageUrl: '/synthetic-frame.jpg', captionId: null, occurrenceId: null, threadId: null }] }} />);
+  expect(screen.getByAltText('Synthetic chart description')).toBeInTheDocument();
+  cleanup();
+});

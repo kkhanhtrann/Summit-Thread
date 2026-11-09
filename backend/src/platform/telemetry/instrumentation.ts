@@ -11,6 +11,14 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 
 import { env } from '../../config/env';
 import { safeUrlAttributes } from './urlAttributes';
+import { sanitizeSpanErrors } from './spanPrivacy';
+
+// Strip raw SDK exception payloads before the OTLP serializer sees them
+class PrivateTraceExporter extends OTLPTraceExporter {
+  override export(...[spans, callback]: Parameters<OTLPTraceExporter['export']>): void {
+    super.export(spans.map(sanitizeSpanErrors), callback);
+  }
+}
 
 // Attach the ingest-only credential to backend telemetry exporters
 const authorizationHeaders = env.DASH0_BACKEND_TOKEN
@@ -27,7 +35,7 @@ const sdk = authorizationHeaders
         'service.name': 'summit-thread-backend',
         'deployment.environment.name': env.NODE_ENV
       }),
-      traceExporter: new OTLPTraceExporter({
+      traceExporter: new PrivateTraceExporter({
         url: `${env.DASH0_OTLP_ENDPOINT}/v1/traces`,
         headers: authorizationHeaders
       }),

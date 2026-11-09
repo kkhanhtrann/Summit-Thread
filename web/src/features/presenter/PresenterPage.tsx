@@ -1,11 +1,14 @@
+import { LiveCameraPublisher } from './LiveCameraPublisher';
 import { useEffect, useRef, useState } from 'react';
-import { uploadRecording, type SessionSnapshot } from '../sessions/public';
+import { uploadRecording, startLiveCapture, type SessionRecording, type SessionSnapshot } from '../sessions/public';
 import { PresenterMediaStage } from './PresenterMediaStage';
 
 // Offer local presenter controls and a plain attendee invitation
 export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
   const code = snapshot.session.id;
   const invitation = `${window.location.origin}/rooms/${code}`;
+  const [liveSource, setLiveSource] = useState<{ recording: SessionRecording; stream: MediaStream } | null>(null);
+  const [startingCamera, setStartingCamera] = useState(false);
   const [copyState, setCopyState] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [minutes, setMinutes] = useState(5);
@@ -53,7 +56,35 @@ export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
       if (active.current) setUploading(false);
     }
   }
-  const recording = snapshot.recording;
+  // Start the live camera room after browser permission succeeds
+  async function goLive(): Promise<void> {
+    setError('');
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Live camera is unavailable in this browser. Choose a recording instead.');
+      return;
+    }
+    setStartingCamera(true);
+    let stream: MediaStream | undefined;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      const result = await startLiveCapture(code, minutes);
+      if (!active.current) return;
+      setLiveSource({ recording: result.recording, stream });
+      stream = undefined;
+    } catch (cameraError) {
+      const browserError = cameraError instanceof DOMException ? cameraError.name : '';
+      setError(browserError === 'NotAllowedError'
+        ? 'Camera or microphone access was blocked. Allow access in your browser settings, then try again.'
+        : browserError === 'NotFoundError'
+          ? 'No camera or microphone was found. Connect one or choose a recording.'
+          : 'Camera access couldn’t start. Check your browser permissions and try again.');
+    } finally {
+      for (const track of stream?.getTracks() ?? []) track.stop();
+      setStartingCamera(false);
+    }
+  }
+
+  const recording = snapshot.recording ?? liveSource?.recording;
   return (
     <>
       <section className="invitation" aria-labelledby="invite-title">
@@ -90,7 +121,11 @@ export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
             These are local demo controls. Anyone with the presenter link can
             use them.
           </p>
-          {recording?.status === 'ready' ? (
+          {liveSource ? (
+            <LiveCameraPublisher sessionId={code} stream={liveSource.stream} recording={recording!} onEnded={() => setLiveSource(null)} />
+          ) : recording?.sourceType === 'camera' ? (
+            <p role="status">This camera session has ended or disconnected. Create a fresh room to start another.</p>
+          ) : recording?.status === 'ready' ? (
             <PresenterMediaStage
               key={`${code}:${recording.mediaUrl}`}
               sessionId={code}
@@ -103,7 +138,7 @@ export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
                 id="recording"
                 type="file"
                 accept="audio/mpeg,audio/mp4,audio/wav,audio/x-wav,audio/webm,audio/ogg,audio/flac,video/mp4,video/webm,video/quicktime"
-                disabled={uploading}
+                disabled={uploading || startingCamera}
                 onChange={(event) => {
                   setFile(event.target.files?.[0] ?? null);
                   setError('');
@@ -113,7 +148,7 @@ export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
               <select
                 id="interval"
                 value={minutes}
-                disabled={uploading}
+                disabled={uploading || startingCamera}
                 onChange={(event) => setMinutes(Number(event.target.value))}
               >
                 {[1, 3, 5, 10].map((value) => (
@@ -128,7 +163,7 @@ export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
               </p>
               <button
                 disabled={
-                  !file || uploading || recording?.status === 'preparing'
+                  !file || uploading || startingCamera || recording?.status === 'preparing'
                 }
                 onClick={() => void upload()}
               >
@@ -155,12 +190,11 @@ export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
             </section>
           )}
           <section className="planned" aria-labelledby="planned-title">
-            <h2 id="planned-title">More source options · Planned</h2>
-            <button disabled>Camera intake — Planned</button>
-            <p>
-              Presenters will share camera audio and video with the room. No
-              capture permission is requested here.
-            </p>
+            <h2 id="planned-title">More source options</h2>
+            {!recording && <>
+              <button disabled={uploading || startingCamera} onClick={() => void goLive()}>{startingCamera ? 'Connecting camera…' : 'Go live with camera'}</button>
+              <p>Share your camera and microphone with attendees. Access is requested only when you start.</p>
+            </>}
             <button disabled>Streaming platform intake — Planned</button>
             <p>
               Presenters will supply a supported stream to play and transcribe

@@ -149,7 +149,8 @@ export function PresenterMediaStage({
     if (!media.current || (!force && Date.now() - lastSent.current < 900))
       return;
     lastSent.current = Date.now();
-    const sourcePosition = Math.min(
+    // Commit the validated end so sub-millisecond browser rounding cannot strand the final window
+    const sourcePosition = media.current.ended && recording.durationMs !== null ? recording.durationMs : Math.min(
       recording.durationMs ?? Infinity,
       Math.max(0, Math.floor(media.current.currentTime * 1000))
     );
