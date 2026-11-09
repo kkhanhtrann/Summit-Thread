@@ -19,10 +19,11 @@ RUN npm --prefix backend prune --omit=dev \
 
 FROM node:24-bookworm-slim AS runtime
 
+LABEL org.opencontainers.image.source="https://github.com/kkhanhtrann/Summit-Thread"
 ENV NODE_ENV=production
 WORKDIR /app
 RUN apt-get update \
-  && apt-get install --no-install-recommends --yes bash nginx openssl \
+  && apt-get install --no-install-recommends --yes bash ffmpeg nginx openssl \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /workspace/backend/package.json /app/backend/package.json
