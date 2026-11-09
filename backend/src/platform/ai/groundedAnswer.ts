@@ -1,7 +1,11 @@
-// Describe one released passage supplied as answer evidence
+// Describe one passage supplied as answer evidence
+// Spoken sources are released captions; material sources are presenter-provided context
 export interface GroundedSource {
   id: string;
-  timestampMs: number;
+  kind: 'spoken' | 'material';
+  // Locate spoken sources in the talk and material sources in their document
+  timestampMs?: number;
+  label?: string;
   text: string;
 }
 

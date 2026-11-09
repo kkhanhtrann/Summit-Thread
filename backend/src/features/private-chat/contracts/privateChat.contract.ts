@@ -20,12 +20,25 @@ export interface PrivateChatRequest {
   contextCaptionId?: string;
 }
 
-// Identify a released caption returned as an answer source
-export interface PrivateChatCitation {
+// Identify a released caption returned as spoken answer evidence
+export interface CaptionCitation {
+  kind: 'caption';
   captionId: string;
   timestampMs: number;
   text: string;
 }
+
+// Identify a presenter material passage returned as supporting context
+export interface MaterialCitation {
+  kind: 'material';
+  passageId: string;
+  materialTitle: string;
+  page: number | null;
+  text: string;
+}
+
+// Keep spoken evidence and presenter material distinguishable in every answer
+export type PrivateChatCitation = CaptionCitation | MaterialCitation;
 
 // Return answer text with citations validated by the owning feature
 export interface PrivateChatResponse {

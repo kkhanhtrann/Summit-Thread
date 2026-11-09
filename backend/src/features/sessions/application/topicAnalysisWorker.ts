@@ -1,9 +1,12 @@
 import { trace } from '@opentelemetry/api';
 
-import type { TopicAnalyzer } from '../../../platform/ai/topicAnalysis';
+import type { TopicAnalysisCaption, TopicAnalysisInput, TopicAnalyzer, TopicBackgroundPassage } from '../../../platform/ai/topicAnalysis';
 import { readProviderFailure } from '../../../platform/ai/providerFailure';
 import { logger } from '../../../platform/logging/logger';
 import type { SessionEventPort, SessionRepositoryPort, TopicAnalysisContext } from './session.service';
+
+// Look up presenter material relevant to one interval's captions
+export type TopicBackgroundProvider = (sessionId: string, captions: TopicAnalysisCaption[]) => Promise<TopicBackgroundPassage[]>;
 
 // Give attendees an initial topic after three finalized captions
 const INITIAL_LIVE_TOPIC_BATCH_SIZE = 3;
@@ -30,7 +33,9 @@ export class TopicAnalysisWorker {
     private readonly repository: SessionRepositoryPort,
     private readonly analyzer: TopicAnalyzer,
     private readonly events: SessionEventPort,
-    private readonly retryMs = 2_000
+    private readonly retryMs = 2_000,
+    // Supply presenter background as vocabulary when material intake is composed
+    private readonly background?: TopicBackgroundProvider
   ) {}
 
   // Retry pending batches and flush paused rooms after startup
@@ -103,6 +108,22 @@ export class TopicAnalysisWorker {
     }
   }
 
+  // Attach presenter background when available; analysis continues without it on failure
+  private async withBackground(sessionId: string, input: TopicAnalysisInput): Promise<TopicAnalysisInput> {
+    if (!this.background) return input;
+    try {
+      const backgroundPassages = await this.background(sessionId, input.captions);
+      return backgroundPassages.length ? { ...input, backgroundPassages } : input;
+    } catch (error) {
+      logger.warn({
+        event: 'topic_background_unavailable',
+        sessionId,
+        errorType: error instanceof Error ? error.name : 'UnknownError'
+      });
+      return input;
+    }
+  }
+
   private async analyzeSession(sessionId: string): Promise<void> {
     let context: TopicAnalysisContext | null;
     try {
@@ -125,12 +146,14 @@ export class TopicAnalysisWorker {
       return;
     }
 
+    const input = await this.withBackground(sessionId, context.input);
     try {
       const snapshot = await trace.getTracer('summit-thread.topics').startActiveSpan('topic.analyze_batch', async (span) => {
         span.setAttribute('session.id', sessionId);
         span.setAttribute('topic.caption_count', context.input.captions.length);
+        span.setAttribute('topic.background_count', input.backgroundPassages?.length ?? 0);
         try {
-          const result = await this.analyzer(context.input);
+          const result = await this.analyzer(input);
           span.setAttribute('topic.segment_count', result.segments.length);
           span.setAttribute('topic.suggestion_count', result.segments.reduce((count, segment) => count + segment.suggestedQuestions.length, 0));
           const applied = await this.repository.applyTopicAnalysis(sessionId, context.cursor, throughSequence, result);

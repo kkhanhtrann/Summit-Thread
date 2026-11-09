@@ -32,6 +32,18 @@ export function formatTimestamp(timestampMs: number): string {
     : `${String(Math.floor(totalSeconds / 60)).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+type Citation = PrivateChatResponse['citations'][number];
+
+// Name where a material citation comes from, including its page when known
+function materialLabel(citation: Extract<Citation, { kind: 'material' }>): string {
+  return citation.page === null ? citation.materialTitle : `${citation.materialTitle}, page ${citation.page}`;
+}
+
+// Give each citation a stable key across spoken and material sources
+function citationKey(citation: Citation): string {
+  return citation.kind === 'caption' ? `caption:${citation.captionId}` : `material:${citation.passageId}`;
+}
+
 // Return a cited caption to its exact attendee transcript position
 function currentTranscriptUrl(sessionId: string, captionId: string): string {
   return `/rooms/${encodeURIComponent(sessionId)}?caption=${encodeURIComponent(captionId)}`;
@@ -123,7 +135,7 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
   return (
     <div className="private-chat-panel">
       <p className="chat-privacy-note private-chat-panel-note">
-        Your questions are private and aren’t saved or shared. Answers link to the transcript passages they use.
+        Your questions are private and aren’t saved or shared. Answers link to the transcript passages and presenter materials they use.
       </p>
       <section className={`chat-thread${messages.length > 0 ? ' has-messages' : ''}`} aria-label="Private conversation" aria-live="polite">
         {messages.length === 0 ? (
@@ -148,18 +160,22 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
             <p className="chat-message-content">{message.content}</p>
             {message.citations && message.citations.length > 0 && (
               <div className="chat-citations-wrap">
-                <p className="chat-citations-heading">Transcript passages <span>{message.citations.length}</span></p>
-                <ul className="chat-citations" aria-label="Transcript passages supporting this answer">
+                <p className="chat-citations-heading">Sources <span>{message.citations.length}</span></p>
+                <ul className="chat-citations" aria-label="Sources supporting this answer">
                   {message.citations.map((citation, index) => (
-                    <li key={citation.captionId}>
+                    <li key={citationKey(citation)} className={`chat-citation-${citation.kind}`}>
                       <button
                         type="button"
                         aria-haspopup="dialog"
-                        aria-label={`View transcript at ${formatTimestamp(citation.timestampMs)}`}
+                        aria-label={citation.kind === 'caption'
+                          ? `View transcript at ${formatTimestamp(citation.timestampMs)}`
+                          : `View presenter material: ${materialLabel(citation)}`}
                         onClick={() => setSelectedCitation(citation)}
                       >
                         <span className="chat-citation-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                        <time>{formatTimestamp(citation.timestampMs)}</time>
+                        {citation.kind === 'caption'
+                          ? <time>{formatTimestamp(citation.timestampMs)}</time>
+                          : <span className="chat-citation-origin">From slides · {materialLabel(citation)}</span>}
                         <span className="chat-citation-text">{citation.text}</span>
                       </button>
                     </li>
@@ -221,28 +237,30 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
           <div className="source-citation-shell">
             <header className="source-citation-header">
               <div>
-                <h2 id="source-citation-title">{formatTimestamp(selectedCitation.timestampMs)}</h2>
-                <p className="source-citation-kind">From the transcript</p>
+                <h2 id="source-citation-title">{selectedCitation.kind === 'caption' ? formatTimestamp(selectedCitation.timestampMs) : materialLabel(selectedCitation)}</h2>
+                <p className="source-citation-kind">{selectedCitation.kind === 'caption' ? 'From the transcript' : 'From the presenter’s materials, not spoken in the talk'}</p>
               </div>
               <button className="source-citation-close" type="button" onClick={() => citationDialog.current?.close()} aria-label="Close source details"><span aria-hidden="true">×</span></button>
             </header>
             <div className="source-citation-body">
               <blockquote id="source-citation-quote">{selectedCitation.text}</blockquote>
             </div>
-            <footer className="source-citation-footer">
-              <p>Source passage</p>
-              <a
-                className="text-action"
-                href={currentTranscriptUrl(sessionId, selectedCitation.captionId)}
-                onClick={onOpenCitation ? (event) => {
-                  event.preventDefault();
-                  citationDialog.current?.close();
-                  onOpenCitation(selectedCitation.captionId);
-                } : undefined}
-              >
-                View in transcript
-              </a>
-            </footer>
+            {selectedCitation.kind === 'caption' && (
+              <footer className="source-citation-footer">
+                <p>Source passage</p>
+                <a
+                  className="text-action"
+                  href={currentTranscriptUrl(sessionId, selectedCitation.captionId)}
+                  onClick={onOpenCitation ? (event) => {
+                    event.preventDefault();
+                    citationDialog.current?.close();
+                    onOpenCitation(selectedCitation.captionId);
+                  } : undefined}
+                >
+                  View in transcript
+                </a>
+              </footer>
+            )}
           </div>
         )}
       </dialog>

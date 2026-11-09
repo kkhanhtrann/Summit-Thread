@@ -659,3 +659,5 @@
 .private-chat-panel .button {
   border-radius: var(--st-radius-pill);
 }
+/* Label presenter material citations apart from spoken timestamps */
+.chat-citation-origin { color: var(--accent-dark); font-size: 0.8rem; font-weight: 700; }

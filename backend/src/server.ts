@@ -4,8 +4,10 @@ import { LocalVisualAssetStore } from './platform/media/localVisualAssets';
 import { createGeminiVisualMomentAnalyzer } from './platform/ai/geminiVisualMomentAnalyzer';
 import { createVisualMomentTelemetry } from './platform/telemetry/visualMomentTelemetry';
 import type { Server } from 'node:http';
-import { ElasticsearchCaptionIndex } from './features/search/public';
+import { ElasticsearchCaptionIndex, ElasticsearchMaterialIndex } from './features/search/public';
 import { ReleasedContentRepository, SessionIndexingWorker, SearchUnavailableError } from './features/sessions/public';
+import { MaterialService, PrismaMaterialRepository, createMaterialBackgroundProvider } from './features/sessions/public';
+import { extractPdfText } from './platform/media/pdfText';
 import { PrivateChatService } from './features/private-chat/public';
 import { createGeminiAnswerGenerator } from './platform/ai/geminiAnswerGenerator';
 import { createApp } from './app';
@@ -31,8 +33,13 @@ import { createGeminiLiveTranscriptionProvider } from './platform/ai/geminiLiveT
 
 // Compose backend infrastructure without requiring AI credentials for media playback
 const search = new ElasticsearchCaptionIndex();
+// Index presenter material separately from released captions
+const materialSearch = new ElasticsearchMaterialIndex();
 const content = new ReleasedContentRepository(prisma);
-const indexing = new SessionIndexingWorker(content, search);
+const indexing = new SessionIndexingWorker(content, search, 1_500, materialSearch);
+const materialRepository = new PrismaMaterialRepository(prisma);
+// Store presenter notes and PDFs as passages and queue their indexing
+const materials = new MaterialService({ repository: materialRepository, extractPdf: extractPdfText, indexer: indexing });
 const privateChat = new PrivateChatService({
   sessions: {
     getReleasedCaptions: async id => (await content.getReleasedContent(id)).captions,
@@ -40,6 +47,10 @@ const privateChat = new PrivateChatService({
       try { return await search.findReleasedCaptions(id, query, allowedCaptionIds); }
       catch { throw new SearchUnavailableError(); }
     }
+  },
+  materials: {
+    getReadyPassages: id => materialRepository.getReadyPassages(id),
+    searchPassages: (id, query, allowedPassageIds) => materialSearch.findPassages(id, query, allowedPassageIds, 5)
   },
   generateAnswer: env.GEMINI_API_KEY ? createGeminiAnswerGenerator() : undefined
 });
@@ -51,7 +62,13 @@ const topicWorker = env.GEMINI_API_KEY?.trim()
   ? new TopicAnalysisWorker(
       new PrismaSessionRepository(prisma),
       createGeminiTopicAnalyzer(),
-      events
+      events,
+      2_000,
+      // Supply relevant presenter material as vocabulary, never as topic evidence
+      createMaterialBackgroundProvider({
+        getReadyPassages: id => materialRepository.getReadyPassages(id),
+        searchPassages: (id, query, allowedPassageIds, size) => materialSearch.findPassages(id, query, allowedPassageIds, size)
+      })
     )
   : { start: () => undefined, wake: async () => undefined, stop: () => undefined };
 const visualMoments = new VisualMomentService({
@@ -92,13 +109,15 @@ async function stop() {
   server?.close();
   server?.closeAllConnections();
   await visualMoments.waitForIdle();
-  await Promise.allSettled([prisma.$disconnect(), search.close()]);
+  await Promise.allSettled([prisma.$disconnect(), search.close(), materialSearch.close()]);
   await shutdownTelemetry();
 }
 // Pause unfinished playback before advertising product routes after restart
 async function start() {
   await prisma.$connect();
   await sessions.initialize();
+  // Fail material intake interrupted by the previous process so presenters can retry
+  await materials.initialize();
   // Resume released search work and pending topic intervals after restart
   topicWorker.start();
   indexing.start();
@@ -108,7 +127,7 @@ async function start() {
     },
     { sessions, recordings },
     { service: privateChat, context: id => content.getReleasedContent(id) },
-    { visualMoments, camera }
+    { visualMoments, camera, materials }
   );
   server = app.listen(env.API_PORT, env.API_HOST, () =>
     logger.info({

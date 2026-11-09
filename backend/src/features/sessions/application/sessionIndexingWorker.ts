@@ -1,6 +1,6 @@
 import { trace } from '@opentelemetry/api';
 
-import type { CaptionSearchIndex } from '../../search/public';
+import type { CaptionSearchIndex, MaterialSearchIndex } from '../../search/public';
 import { logger } from '../../../platform/logging/logger';
 import type { IndexQueueRepository } from '../contracts/releasedContent';
 
@@ -12,7 +12,9 @@ export class SessionIndexingWorker {
   constructor(
     private readonly repository: IndexQueueRepository,
     private readonly search: CaptionSearchIndex,
-    private readonly retryMs = 1_500
+    private readonly retryMs = 1_500,
+    // Index presenter material passages when material search is composed
+    private readonly materials?: MaterialSearchIndex
   ) {}
 
   start(): void {
@@ -52,6 +54,16 @@ export class SessionIndexingWorker {
             try {
               if (job.operation === 'delete_session') {
                 await this.search.deleteSession(job.sessionId);
+                await this.materials?.deleteSession(job.sessionId);
+              } else if (job.operation === 'delete_material' || job.operation === 'index_material_passage') {
+                // Keep material jobs pending rather than acknowledging them without a material index
+                if (!this.materials) throw new Error('material index unavailable');
+                if (job.operation === 'delete_material') {
+                  if (job.materialId) await this.materials.deleteMaterial(job.sessionId, job.materialId);
+                } else if (job.passage) {
+                  // Skip passages removed or no longer ready; their delete job owns cleanup
+                  await this.materials.indexPassage(job.sessionId, job.passage);
+                }
               } else if (job.caption) {
                 await this.search.indexCaption(job.sessionId, job.caption, job.topic ?? undefined);
               }

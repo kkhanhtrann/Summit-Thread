@@ -10,10 +10,27 @@ const snapshot: PrivateAskContext = {
  captions: [{ id: 'released', sequence: 0, timestampMs: 23000, text: 'SYNTHETIC shade cools paths.' }],
  suggestedQuestions: ['How does shade help?']
 };
-const response = { answer: 'Shade cools the route.', citations: [{ captionId: 'released', timestampMs: 23000, text: snapshot.captions[0]!.text }] };
+const response = { answer: 'Shade cools the route.', citations: [{ kind: 'caption' as const, captionId: 'released', timestampMs: 23000, text: snapshot.captions[0]!.text }] };
 describe('private conversation', () => {
  afterEach(cleanup);
  beforeEach(() => { api.ask.mockReset(); });
+ it('labels presenter material citations separately from spoken transcript passages', async () => {
+  // Synthetic test fixture: a labeled presenter passage, not real material
+  const material = { kind: 'material' as const, passageId: 'm-1:3', materialTitle: 'Fixture slides', page: 4, text: 'SYNTHETIC slide: reflective roofs.' };
+  api.ask.mockResolvedValue({ answer: 'The slides note reflective roofs.', citations: [...response.citations, material] });
+  HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) { this.setAttribute('open', ''); };
+  const user = userEvent.setup();
+  render(<PrivateChatPanel sessionId="A5000001" snapshot={snapshot} connectionState="connected" />);
+  await user.type(screen.getByRole('textbox', { name: 'Your question' }), 'What about roofs?');
+  await user.click(screen.getByRole('button', { name: 'Ask' }));
+
+  expect(await screen.findByRole('button', { name: 'View transcript at 00:23' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'View presenter material: Fixture slides, page 4' }));
+  const dialog = screen.getByRole('dialog');
+  expect(dialog).toHaveTextContent('From the presenter’s materials, not spoken in the talk');
+  expect(dialog).toHaveTextContent(material.text);
+  expect(screen.queryByRole('link', { name: 'View in transcript' })).not.toBeInTheDocument();
+ });
  it('fills a suggestion and waits for Ask before sending it', async () => {
   api.ask.mockResolvedValue(response);
   const user = userEvent.setup();
