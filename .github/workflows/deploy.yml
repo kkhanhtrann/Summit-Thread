@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   packages: write
+  pull-requests: write
 
 jobs:
   publish:
@@ -27,11 +28,26 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/summit-thread:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/summit-thread:main
-      - name: Pin the deployed image
+      - name: Prepare deployment pin
         run: |
           sed -i "s/newTag: .*/newTag: $GITHUB_SHA/" deploy/kustomization.yaml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add deploy/kustomization.yaml
-          git commit -m "deploy: $GITHUB_SHA [skip ci]"
-          git push
+      - name: Require deployment PR token
+        env:
+          DEPLOY_PR_TOKEN: ${{ secrets.DEPLOY_PR_TOKEN }}
+        run: |
+          if [ -z "$DEPLOY_PR_TOKEN" ]; then
+            echo "DEPLOY_PR_TOKEN repository secret is required to create a CI-triggering deployment PR." >&2
+            exit 1
+          fi
+      - name: Open deployment pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.DEPLOY_PR_TOKEN }}
+          branch: deploy/${{ github.sha }}
+          delete-branch: true
+          title: "deploy: ${{ github.sha }}"
+          commit-message: "deploy: ${{ github.sha }}"
+          body: |
+            Update the Radar deployment image to `${{ github.sha }}`.
+
+            The image was published by the Deploy to Radar workflow.

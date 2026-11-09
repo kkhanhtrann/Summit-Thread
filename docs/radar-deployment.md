@@ -25,11 +25,19 @@ participant content.
 ## Release flow
 
 Push to `main`. The workflow builds the image, publishes both the commit SHA and
-`main` tags, and commits the SHA into `deploy/kustomization.yaml`. Argo CD then
-syncs that revision. The application has one replica because uploaded recordings
+`main` tags, and opens a deployment pull request that pins the commit SHA in
+`deploy/kustomization.yaml`. Merge that deployment PR, and Argo CD then syncs
+that revision. The application has one replica because uploaded recordings
 use a pod-local volume, a readiness check backed by
 PostgreSQL and Elasticsearch, and a liveness check that does not require either
 dependency.
+
+Before using this release flow, add a repository secret named `DEPLOY_PR_TOKEN`
+containing a fine-grained GitHub token with repository Contents read/write and
+Pull requests read/write access. A token-backed PR is required because GitHub
+does not start required pull-request workflows for pull requests created with
+the default `GITHUB_TOKEN`. The repository setting **Allow GitHub Actions to
+create and approve pull requests** must also be enabled.
 
 Recordings use an ephemeral pod volume and are not a durable production media
 store. This deployment is a hackathon environment, not an authenticated
