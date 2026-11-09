@@ -14,7 +14,7 @@ interface ReleasedCaption {
 export interface PrivateChatDependencies {
   sessions: {
     getReleasedCaptions(sessionId: string): Promise<ReleasedCaption[]>;
-    searchReleasedCaptions(sessionId: string, query: string): Promise<ReleasedCaption[]>;
+    searchReleasedCaptions(sessionId: string, query: string, allowedCaptionIds: string[]): Promise<ReleasedCaption[]>;
   };
   generateAnswer?: AnswerGenerator;
 }
@@ -45,6 +45,7 @@ export class PrivateChatService {
 
     // Intersect search results with the current persisted released-caption set
     const releasedById = new Map(releasedCaptions.map((caption) => [caption.id, caption]));
+    const allowedCaptionIds = [...releasedById.keys()];
     const sources = new Map<string, ReleasedCaption>();
     const contextualSource = request.contextCaptionId
       ? releasedCaptions.find((caption) => caption.id === request.contextCaptionId)
@@ -54,7 +55,7 @@ export class PrivateChatService {
 
     for (const query of queries) {
       let hits: ReleasedCaption[];
-      try { hits = await this.dependencies.sessions.searchReleasedCaptions(sessionId, query); }
+      try { hits = await this.dependencies.sessions.searchReleasedCaptions(sessionId, query, allowedCaptionIds); }
       catch (error) {
         answerFailures.add(1, { reason: 'search_unavailable' });
         answerDuration.record(performance.now() - startedAt, { result: 'failed' });

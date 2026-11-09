@@ -34,8 +34,8 @@ describe('PrivateChatService', () => {
       ]
     });
 
-    expect(searchReleasedCaptions).toHaveBeenNthCalledWith(1, 'live-session', 'Why does that matter?');
-    expect(searchReleasedCaptions).toHaveBeenNthCalledWith(2, 'live-session', 'How can trees help people get to a bus stop?');
+    expect(searchReleasedCaptions).toHaveBeenNthCalledWith(1, 'live-session', 'Why does that matter?', [releasedCaption.id]);
+    expect(searchReleasedCaptions).toHaveBeenNthCalledWith(2, 'live-session', 'How can trees help people get to a bus stop?', [releasedCaption.id]);
     expect(result).toEqual({
       answer: 'A shaded route can make the walk to a bus stop cooler.',
       citations: [{

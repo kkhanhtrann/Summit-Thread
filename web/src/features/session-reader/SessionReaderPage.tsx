@@ -8,10 +8,10 @@ import {
 import { PrivateChatPanel } from '../private-chat/public';
 import { TopicThreadDialog } from './TopicThreadDialog';
 
-type ReaderTab = 'topics' | 'transcript';
+type ReaderTab = 'topics' | 'transcript' | 'ask';
 
 // Order the reader tabs for arrow-key navigation
-const READER_TABS: ReaderTab[] = ['topics', 'transcript'];
+const READER_TABS: ReaderTab[] = ['topics', 'transcript', 'ask'];
 
 // Format talk offsets as readable source timestamps
 function formatTimestamp(timestampMs: number): string {
@@ -213,7 +213,7 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
   }
 
   return (
-    <>
+    <div className="reader-shell">
       <p className="muted">Room {snapshot.session.id} · Attendee view</p>
       <div className="room-columns reader-columns">
         <div>
@@ -259,6 +259,15 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
               tabIndex={activeTab === 'transcript' ? 0 : -1}
               onClick={() => setActiveTab('transcript')}
             >Transcript</button>
+            <button
+              id="ask-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'ask'}
+              aria-controls="ask-panel"
+              tabIndex={activeTab === 'ask' ? 0 : -1}
+              onClick={() => setActiveTab('ask')}
+            >Ask</button>
           </div>
 
           <div id="topics-panel" role="tabpanel" aria-labelledby="topics-tab" hidden={activeTab !== 'topics'}>
@@ -368,11 +377,8 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
             )}
             <p className="muted">Only saved, finalized speech appears here.</p>
           </div>
-        </section>
-      </div>
-      <section aria-labelledby="private-ask-title" className="reader-private-ask">
-        <h2 id="private-ask-title">Ask privately</h2>
-        <a href={`/ask?session=${encodeURIComponent(snapshot.session.id)}`}>Open private Ask on its own</a>
+      <section id="ask-panel" className="session-tab-panel ask-panel reader-private-ask" role="tabpanel" aria-labelledby="ask-tab" hidden={activeTab !== 'ask'}>
+        <header className="ask-panel-heading"><h2>Ask about the talk</h2></header>
         <PrivateChatPanel sessionId={snapshot.session.id} snapshot={snapshot} connectionState="connected" onOpenCitation={id => {
           // Reveal Ask evidence through the reader's local navigation without seeking media
           setSelectedOccurrenceId(snapshot.captions.find(caption => caption.id === id)?.occurrenceId ?? null);
@@ -381,6 +387,8 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
           setActiveTab('transcript');
         }} />
       </section>
+        </section>
+      </div>
       <TopicThreadDialog
         thread={openThread}
         initialOccurrenceId={openOccurrenceId}
@@ -393,6 +401,6 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
         }}
         onOpenCaption={openTranscriptCaption}
       />
-    </>
+    </div>
   );
 }

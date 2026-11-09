@@ -16,7 +16,9 @@ function RoomPrivateChat({ sessionId }: { sessionId: string }) {
   const [captionId, setCaptionId] = useState<string | null>(null);
   const evidence = useRef<HTMLElement>(null);
   const caption = snapshot?.captions.find(item => item.id === captionId);
-  useEffect(() => { if (caption) evidence.current?.focus(); }, [caption]);
+  const hasCaption = Boolean(caption);
+  // Focus a newly opened passage once while background context refreshes stay quiet
+  useEffect(() => { if (captionId && hasCaption) evidence.current?.focus(); }, [captionId, hasCaption]);
   useEffect(() => {
     const controller = new AbortController();
     let running = false;

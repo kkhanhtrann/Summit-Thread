@@ -31,9 +31,8 @@ const indexing = new SessionIndexingWorker(content, search);
 const privateChat = new PrivateChatService({
   sessions: {
     getReleasedCaptions: async id => (await content.getReleasedContent(id)).captions,
-    searchReleasedCaptions: async (id, query) => {
-      const room = await content.getReleasedContent(id);
-      try { return await search.findReleasedCaptions(id, query, room.captions.map(c => c.id)); }
+    searchReleasedCaptions: async (id, query, allowedCaptionIds) => {
+      try { return await search.findReleasedCaptions(id, query, allowedCaptionIds); }
       catch { throw new SearchUnavailableError(); }
     }
   },
