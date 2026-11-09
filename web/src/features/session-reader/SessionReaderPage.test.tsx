@@ -234,6 +234,19 @@ describe('topic reading', () => {
     expect(screen.getByRole('tab', { name: 'Topics' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('opens the transcript at the newest caption while following', async () => {
+    // Give jsdom a measurable caption list so the follow scroll is observable
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(900);
+    const scrolled = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'scrollTop', 'set').mockImplementation(scrolled);
+    render(<SessionReaderPage snapshot={topicSnapshot()} />);
+    expect(scrolled).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Transcript' }));
+
+    expect(scrolled).toHaveBeenLastCalledWith(900);
+  });
+
   it('keeps raw transcript keyword search off the reading surface', () => {
     render(<SessionReaderPage snapshot={topicSnapshot()} />);
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();

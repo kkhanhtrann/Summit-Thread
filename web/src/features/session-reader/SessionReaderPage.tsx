@@ -165,11 +165,12 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
   const skippedCount = snapshot.topicAnalysisSkippedCaptionCount;
   const hasStarted = Boolean(recording && (recording.playbackPositionMs > 0 || snapshot.session.isLive));
 
-  // Follow new captions only while the reader stays at the newest line
+  // Follow new captions only while the visible reader stays at the newest line
+  // Re-run on tab changes because a hidden panel has no layout to scroll
   useEffect(() => {
-    if (following && !selectedCaptionId && reader.current)
+    if (activeTab === 'transcript' && following && !selectedCaptionId && reader.current)
       reader.current.scrollTop = reader.current.scrollHeight;
-  }, [snapshot.captions, following, selectedCaptionId]);
+  }, [activeTab, snapshot.captions, following, selectedCaptionId]);
 
   // Reveal only an explicitly opened passage so arriving captions never move the reader
   useEffect(() => {
