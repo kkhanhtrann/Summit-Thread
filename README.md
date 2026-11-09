@@ -1,6 +1,12 @@
 # Summit Thread
 
-Local development foundation for a conference reader built around released speech, topic threads, and private cited answers.
+**Summit Thread is a real-time conference companion that makes presentations more accessible and easier to follow.** It automatically organizes live presentations into a continuously updated feed of key topics and important moments. Whether you're arriving late, stepping away, or struggling to keep up, Summit Thread lets you instantly catch up on what you've missed, ask questions about the presentation, and explore explanations at your own pace. **So no matter when you join, you're never out of the loop.**
+
+## Current implementation
+
+The local development foundation is implemented. It exposes liveness/readiness and a status page that makes an actual readiness request through the Vite proxy to the backend. Room creation, uploads, transcription, topic processing, and private Ask are subsequent feature work.
+
+## Run locally
 
 Requires Node 24, npm, Docker Compose v2, and available local ports 3110, 5185, 5435, and 9203.
 
@@ -14,7 +20,7 @@ npm run db:push
 npm run dev
 ```
 
-Open http://127.0.0.1:5185. The status page makes an actual readiness request through the Vite proxy to the backend. The foundation exposes liveness/readiness; room creation, uploads, transcription, topic processing, and private Ask are subsequent feature work.
+Open http://127.0.0.1:5185. `npm run dev` starts both the backend and frontend in one terminal. Docker services run in the background after `npm run services:up`.
 
 ```sh
 npm run check
