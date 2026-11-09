@@ -32,7 +32,7 @@ Keep `GEMINI_API_KEY` and `GEMINI_TEXT_MODEL` in `backend/.env`. Topic generatio
 
 ## Reading and navigation
 
-Attendees open `/rooms/{roomCode}`. The reader shows shared playback beside separate Topics and Transcript tabs. Topics lists threads in talk order and marks the current one; a dialog shows each visit, its note, and its evidence passages without seeking shared media. "View in transcript" selects that exact caption. Inspected topics, selected passages, and scroll position stay put as captions and topic revisions arrive. Return to now clears the inspected moment and follows the newest caption again.
+Attendees open `/rooms/{roomCode}`. The reader shows shared playback beside separate Topics and Transcript tabs. Topics lists threads by their latest visit, newest first, with the start of the talk at the bottom. Returning topics move to the top while keeping their complete visit history. The current topic is marked “Talking about now” during playback and “Current topic” while paused. A brief “Topic updated” status announces changed topic content, without firing for playback-clock updates; a dialog shows each visit, its note, and its evidence passages without seeking shared media. "View in transcript" selects that exact caption. Inspected topics, selected passages, and scroll position stay put as captions and topic revisions arrive. Return to now clears the inspected moment and follows the newest caption again.
 
 The transcription gateway calls `refreshTopics` after flushing caption writes at each source-interval boundary and when capture stops; the backend turns that into a requested topic range. `getSnapshot` and every topic commit share one transaction reader, and topic writes take the same room row lock as caption release and playback.
 

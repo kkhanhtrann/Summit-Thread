@@ -132,10 +132,22 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
   const activeEntry = occurrenceEntries.find(({ occurrence }) => occurrence.id === snapshot?.activeOccurrenceId)
     ?? occurrenceEntries.at(-1)
     ?? null;
-  // Keep topic threads in talk order so attendees can see the conversation build over time
+  // Put the most recently discussed topic first while retaining each thread’s visit history
   const topicThreads = [...(snapshot?.threads ?? [])]
     .filter((thread) => thread.occurrences.length > 0)
-    .sort((left, right) => (left.occurrences[0]?.startedAtMs ?? 0) - (right.occurrences[0]?.startedAtMs ?? 0));
+    .sort((left, right) => (right.occurrences.at(-1)?.startedAtMs ?? 0) - (left.occurrences.at(-1)?.startedAtMs ?? 0));
+  const [topicUpdated, setTopicUpdated] = useState(false);
+  // Announce changed topic content without treating source-clock ticks as topic updates
+  const topicContent = JSON.stringify(snapshot.threads.map(thread => [thread.id, thread.title, thread.summary,
+    thread.occurrences.map(occurrence => [occurrence.id, occurrence.summary, occurrence.evidenceCaptionIds])]));
+  const previousTopicContent = useRef(topicContent);
+  useEffect(() => {
+    if (previousTopicContent.current === topicContent) return;
+    previousTopicContent.current = topicContent;
+    setTopicUpdated(true);
+    const timer = window.setTimeout(() => setTopicUpdated(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [topicContent]);
   useEffect(() => { if (!openThreadId) topicOpener.current?.focus(); }, [openThreadId]);
   const topicThreadDialog = openThreadId ? snapshot?.threads.find((thread) => thread.id === openThreadId) ?? null : null;
   // Resolve citation links to their topic occurrence before showing the live position
@@ -479,6 +491,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                         Next topic update in {formatThreadUpdateCountdown(sourcePositionMs, recording.analysisWindowMinutes)}
                       </span>
                     )}
+                    {topicUpdated && <span className="topic-update-notice" role="status">Topic updated</span>}
                     {isReadingEarlier && <button className="text-action" type="button" onClick={returnToNow}>Back to current topic</button>}
                   </div>
 
@@ -495,7 +508,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                           {visualMomentState && <span className="topic-visual-status">{visualMomentState}</span>}
                         </div>
                       </div>
-                      <ol className="topic-milestone-timeline" aria-label="Topic threads in chronological order">
+                      <ol className="topic-milestone-timeline" reversed aria-label="Topic threads, latest first">
                         {topicThreads.map((thread, index) => {
                           const firstOccurrence = thread.occurrences[0];
                           const latestOccurrence = thread.occurrences.at(-1);
@@ -509,7 +522,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                           const featuredVisualMoment = featuredVisualOccurrence?.moment;
                           return (
                             <li className={`topic-milestone${thread.id === activeEntry?.thread.id ? ' is-current' : ''}`} key={thread.id}>
-                              <span className="topic-milestone-marker" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                              <span className="topic-milestone-marker" aria-hidden="true">{String(topicThreads.length - index).padStart(2, '0')}</span>
                               <button
                                 className="topic-milestone-card"
                                 type="button"
@@ -520,7 +533,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
                               >
                                 <span className="topic-milestone-topline">
                                   <time>{formatTimestamp(firstOccurrence.startedAtMs)}</time>
-                                  {thread.id === activeEntry?.thread.id && <span className="topic-history-status">Current topic</span>}
+                                  {thread.id === activeEntry?.thread.id && <span className="topic-history-status">{recording?.isPlaying ? 'Talking about now' : 'Current topic'}</span>}
                                   <span className="topic-milestone-open" aria-hidden="true">↗</span>
                                 </span>
                                 {featuredVisualMoment && (
