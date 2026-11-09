@@ -1,0 +1,1 @@
+Fix low and medium severity correctness, type, test, boundary, and privacy findings within the issue scope. Preserve meaningful checks. Never alter credentials, access policies, branch protections, deployment, or merge settings. Require passing CI before delivering fixes. Leave architecture changes for human review.

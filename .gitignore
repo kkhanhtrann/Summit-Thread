@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+web/dist/
+backend/dist/
+coverage/
+.hallmark/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local service data
+.data/
+docker-data/
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
