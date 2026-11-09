@@ -1,6 +1,6 @@
 import type { UrlAttributeRecord } from '@dash0/sdk-web';
 
-// Redact attendee search terms before browser URLs reach Dash0
+// Redact sensitive URL components before browser URLs reach Dash0
 export function scrubUrlAttributes(attributes: UrlAttributeRecord): UrlAttributeRecord {
   const fullUrl = attributes['url.full'];
   if (typeof fullUrl !== 'string') return attributes;
@@ -11,13 +11,14 @@ export function scrubUrlAttributes(attributes: UrlAttributeRecord): UrlAttribute
   } catch {
     return attributes;
   }
-  if (!url.pathname.endsWith('/captions/search') || !url.searchParams.has('q')) return attributes;
 
-  url.searchParams.set('q', 'REDACTED');
+  url.username = '';
+  url.password = '';
+  url.hash = '';
+  for (const name of [...new Set(url.searchParams.keys())]) url.searchParams.set(name, 'REDACTED');
 
-  return {
-    ...attributes,
-    'url.full': url.toString(),
-    'url.query': url.search.slice(1)
-  };
+  const scrubbed: UrlAttributeRecord = { ...attributes, 'url.full': url.toString() };
+  if (url.search) scrubbed['url.query'] = url.search.slice(1);
+  else delete (scrubbed as Record<string, unknown>)['url.query'];
+  return scrubbed;
 }

@@ -18,9 +18,10 @@ let stopping = false;
 async function stop(code = 0) {
   if (stopping) return;
   stopping = true;
-  for (const { child } of children) child.kill('SIGTERM');
-  await Promise.all(children.map(({ child }) => new Promise((resolve) => child.once('exit', resolve))));
   process.exitCode = code;
+  const running = children.filter(({ child }) => child.exitCode === null && child.signalCode === null);
+  for (const { child } of running) child.kill('SIGTERM');
+  await Promise.all(running.map(({ child }) => new Promise((resolve) => child.once('exit', resolve))));
 }
 
 process.once('SIGINT', () => void stop());
