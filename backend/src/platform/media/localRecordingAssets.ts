@@ -65,9 +65,16 @@ export async function readRecordingDuration(
   path: string,
   kind: 'audio' | 'video'
 ): Promise<number> {
+  let validatorPath: string;
+  // Keep rooms and playback available when an optional platform binary is missing
+  try {
+    validatorPath = (await import('@ffprobe-installer/ffprobe')).default.path;
+  } catch {
+    throw new Error('Recording validation is unavailable');
+  }
   try {
     const { stdout } = await promisify(execFile)(
-      'ffprobe',
+      validatorPath,
       [
         '-v',
         'error',
@@ -94,7 +101,14 @@ export async function readRecordingDuration(
     )
       throw new Error();
     return duration;
-  } catch {
+  } catch (error) {
+    // Keep backend tool failures out of the invalid-source HTTP response
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error.code === 'ENOENT' || error.code === 'EACCES')
+    )
+      throw new Error('Recording validation is unavailable');
     throw new RangeError(
       'The recording could not be validated. Choose a valid file with audio.'
     );
