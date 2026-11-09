@@ -2,12 +2,12 @@
 /* Global shell, entry, and state pages; reader and presenter screens use conference-experience.css */
 :scope {
   font-family: var(--st-font-body);
-  color: var(--st-night);
-  background: var(--st-mist);
+  color: var(--st-ink);
+  background: var(--st-canvas);
   font-synthesis: none;
   line-height: 1.55;
-  accent-color: var(--st-lagoon);
-  scrollbar-color: var(--st-line-strong) var(--st-mist);
+  accent-color: var(--st-focus);
+  scrollbar-color: var(--st-line-strong) var(--st-canvas);
 }
 * {
   box-sizing: border-box;
@@ -16,16 +16,16 @@ body {
   margin: 0;
 }
 ::selection {
-  color: var(--st-night);
-  background: var(--st-teal-100);
+  color: var(--st-ink);
+  background: var(--st-soft-2);
 }
 a {
-  color: var(--st-lagoon);
+  color: var(--st-ink);
   text-underline-offset: 0.2em;
   overflow-wrap: anywhere;
 }
 a:hover {
-  color: var(--st-lagoon-700);
+  color: var(--st-action-hover);
 }
 button,
 input,
@@ -39,13 +39,13 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 :focus-visible {
-  outline: 3px solid var(--st-lagoon);
+  outline: 3px solid var(--st-focus);
   outline-offset: 3px;
 }
 button {
   padding: 0.7rem 1.3rem;
   color: var(--st-surface);
-  background: var(--st-lagoon);
+  background: var(--st-action);
   border: 1px solid transparent;
   border-radius: var(--st-radius-pill);
   cursor: pointer;
@@ -54,7 +54,7 @@ button {
   transition: background-color var(--st-dur-fast) var(--st-ease), transform var(--st-dur-fast) var(--st-ease), box-shadow var(--st-dur-fast) var(--st-ease);
 }
 button:hover:not(:disabled) {
-  background: var(--st-lagoon-700);
+  background: var(--st-action-hover);
 }
 button:active:not(:disabled) {
   transform: translateY(1px);
@@ -65,12 +65,12 @@ button:disabled {
   background: var(--st-disabled);
 }
 button.secondary {
-  color: var(--st-lagoon);
+  color: var(--st-ink);
   border-color: var(--st-line-strong);
   background: var(--st-surface);
 }
 button.secondary:hover:not(:disabled) {
-  background: var(--st-teal-50);
+  background: var(--st-soft);
 }
 button.secondary:disabled {
   color: var(--st-muted);
@@ -79,7 +79,7 @@ button.secondary:disabled {
 }
 /* Amber is the color of "now": reserved for the primary step into a live talk */
 .button-sun {
-  color: var(--st-night);
+  color: var(--st-ink);
   background: var(--st-amber);
   box-shadow: 0 6px 18px -8px rgb(138 75 0 / 55%);
 }
@@ -94,15 +94,15 @@ select {
   padding: 0.7rem 0.9rem;
   border: 1.5px solid var(--st-line-strong);
   border-radius: var(--st-radius-control);
-  color: var(--st-night);
+  color: var(--st-ink);
   background: var(--st-surface);
-  caret-color: var(--st-lagoon);
+  caret-color: var(--st-ink);
   transition: border-color var(--st-dur-fast) var(--st-ease), box-shadow var(--st-dur-fast) var(--st-ease);
 }
 input:focus-visible,
 select:focus-visible {
   outline: none;
-  border-color: var(--st-lagoon);
+  border-color: var(--st-focus);
   box-shadow: var(--st-focus-glow);
 }
 input::placeholder {
@@ -176,15 +176,15 @@ nav a {
   transition: background-color var(--st-dur-fast) var(--st-ease), color var(--st-dur-fast) var(--st-ease);
 }
 nav a:hover {
-  color: var(--st-night);
-  background: var(--st-teal-50);
+  color: var(--st-ink);
+  background: var(--st-soft);
 }
 /* Logo and wordmark shared by every screen header */
 .brand-mark {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  color: var(--st-night);
+  color: var(--st-ink);
   font-family: var(--st-font-display);
   font-size: 1.3rem;
   font-weight: 720;
@@ -192,7 +192,7 @@ nav a:hover {
   text-decoration: none;
 }
 .brand-mark:hover {
-  color: var(--st-night);
+  color: var(--st-ink);
 }
 .brand-mark-logo {
   width: 2.4rem;
@@ -327,7 +327,7 @@ video {
   display: block;
   width: 100%;
   max-height: 60vh;
-  background: var(--st-night-deep);
+  background: var(--st-dark-deep);
   border-radius: var(--st-radius-card);
 }
 audio {
@@ -339,7 +339,7 @@ progress {
   display: block;
   width: 100%;
   margin-top: 1rem;
-  accent-color: var(--st-lagoon);
+  accent-color: var(--st-focus);
 }
 .planned {
   border-top: 1px solid var(--st-line);
@@ -484,13 +484,13 @@ footer {
   padding: 0.6rem 1rem;
 }
 .reader-tabs [role='tab']:hover:not(:disabled) {
-  color: var(--st-night);
-  background: var(--st-teal-50);
+  color: var(--st-ink);
+  background: var(--st-soft);
 }
 .reader-tabs [role='tab'][aria-selected='true'] {
-  color: var(--st-night);
+  color: var(--st-ink);
   font-weight: 600;
-  border-bottom-color: var(--st-lagoon);
+  border-bottom-color: var(--st-focus);
 }
 .reading-position {
   display: flex;
@@ -522,15 +522,15 @@ footer {
   width: 100%;
   padding: 1rem 0.5rem;
   text-align: left;
-  color: var(--st-night);
+  color: var(--st-ink);
   background: transparent;
   border-radius: 0.25rem;
 }
 .topic-milestone:hover:not(:disabled) {
-  background: var(--st-teal-50);
+  background: var(--st-soft);
 }
 .topic-milestones .is-current .topic-milestone {
-  border-left: 3px solid var(--st-lagoon);
+  border-left: 3px solid var(--st-focus);
   padding-left: 0.9rem;
 }
 .topic-milestone-title {
@@ -567,7 +567,7 @@ footer {
   background: var(--st-line-strong);
 }
 .topic-waiting.is-listening .topic-waiting-pulse {
-  background: var(--st-lagoon);
+  background: var(--st-action);
   animation: topic-listening 1.8s ease-in-out infinite;
 }
 @keyframes topic-listening {
@@ -592,27 +592,27 @@ footer {
   margin: 0 0 0.3rem;
 }
 .captions li[aria-current='location'] {
-  background: var(--st-teal-50);
-  box-shadow: inset 3px 0 0 var(--st-lagoon);
+  background: var(--st-soft);
+  box-shadow: inset 3px 0 0 var(--st-focus);
   padding-left: 0.6rem;
 }
 .text-action {
   min-height: 44px;
   padding: 0.4rem 0;
-  color: var(--st-lagoon);
+  color: var(--st-ink);
   background: transparent;
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 .text-action:hover:not(:disabled) {
-  color: var(--st-lagoon-700);
+  color: var(--st-action-hover);
   background: transparent;
 }
 .topic-thread-dialog {
   width: min(64rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   padding: 0;
-  color: var(--st-night);
+  color: var(--st-ink);
   background: var(--st-surface);
   border: 1px solid var(--st-line);
   border-radius: 0.4rem;
@@ -630,12 +630,12 @@ footer {
   gap: 1rem;
 }
 .dialog-close-button {
-  color: var(--st-lagoon);
+  color: var(--st-ink);
   background: transparent;
   border-color: var(--st-line-strong);
 }
 .dialog-close-button:hover:not(:disabled) {
-  background: var(--st-teal-50);
+  background: var(--st-soft);
 }
 .topic-thread-dialog-lead {
   font-size: 1.15rem;
@@ -680,15 +680,15 @@ footer {
   gap: 0.25rem;
   padding: 0.8rem 0.5rem;
   text-align: left;
-  color: var(--st-night);
+  color: var(--st-ink);
   background: transparent;
 }
 .dialog-visit-button:hover:not(:disabled) {
-  background: var(--st-teal-50);
+  background: var(--st-soft);
 }
 .dialog-visit.is-selected .dialog-visit-button {
-  background: var(--st-teal-50);
-  box-shadow: inset 3px 0 0 var(--st-lagoon);
+  background: var(--st-soft);
+  box-shadow: inset 3px 0 0 var(--st-focus);
 }
 .dialog-visit-topline,
 .dialog-visit-source-count,
@@ -739,12 +739,12 @@ footer {
 .visual-moments-partial{color:var(--st-ember)}
 .visual-moment-list{list-style:none;padding:0;margin:1rem 0 0;display:grid;gap:1.5rem;grid-template-columns:repeat(auto-fill,minmax(min(100%,16rem),1fr))}
 .visual-moment figure{margin:0}
-.visual-still{display:block;width:100%;height:auto;border-radius:.35rem;background:var(--st-teal-50)}
+.visual-still{display:block;width:100%;height:auto;border-radius:.35rem;background: var(--st-soft)}
 .visual-still-unavailable{margin:0;padding:1rem;border:1px dashed var(--st-line-strong);border-radius:.35rem;line-height:1.5}
 .visual-moment figcaption{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0;line-height:1.4}
-.visual-moment figcaption time{font-variant-numeric:tabular-nums;color:var(--st-lagoon);font-weight:600}
+.visual-moment figcaption time{font-variant-numeric:tabular-nums;color: var(--st-ink);font-weight:600}
 .visual-moment-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
-.visual-dialog-backdrop{position:fixed;inset:0;display:grid;place-items:center;padding:1rem;background:rgb(8 27 30 / .55);z-index:400}
+.visual-dialog-backdrop{position:fixed;inset:0;display:grid;place-items:center;padding:1rem;background:rgb(30 23 18 / .55);z-index:400}
 .visual-dialog{width:min(100%,56rem);max-height:100%;overflow:auto;padding:1.25rem;background:var(--st-surface);border-radius:.5rem}
 .visual-dialog-heading{display:flex;justify-content:space-between;align-items:start;gap:1rem}
 .visual-dialog-heading h3{margin:0;font-size:1.2rem}
@@ -752,3 +752,28 @@ footer {
 .visual-dialog-meta{color:var(--st-muted)}
 
 }
+
+/* Full-width ember top bar with cream logo text and links */
+.masthead {
+  background: var(--st-bar);
+  border-bottom: 0;
+  box-shadow: none;
+  clip-path: none;
+  /* Paint the bar past the centered header box to both viewport edges */
+  border-image: conic-gradient(var(--st-bar) 0 0) fill 0 / / 0 100vmax;
+}
+.masthead .brand-mark,
+.masthead .brand-mark:hover {
+  color: var(--st-on-bar);
+}
+.masthead nav a {
+  color: var(--st-dim-on-bar);
+}
+.masthead nav a:hover {
+  color: var(--st-on-bar);
+  background: var(--st-bar-2);
+}
+.masthead :focus-visible {
+  outline-color: var(--st-on-bar);
+}
+

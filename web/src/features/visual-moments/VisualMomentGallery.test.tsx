@@ -69,7 +69,7 @@ describe('VisualMomentGallery', () => {
 
   it('shows the pending review state before any still is released', () => {
     renderGallery([], { ...recording, visualReviewSkippedWindowCount: 0, analysisState: 'analyzing' });
-    expect(screen.getByRole('status')).toHaveTextContent('Checking the latest finished interval for a useful still');
+    expect(screen.getByRole('status')).toHaveTextContent('Looking for key slides');
   });
 
   it('reports skipped intervals honestly', () => {
@@ -79,6 +79,6 @@ describe('VisualMomentGallery', () => {
 
   it('explains audio-only recordings', () => {
     renderGallery([], { ...recording, mediaKind: 'audio' });
-    expect(screen.getByRole('status')).toHaveTextContent('Audio only · no stills to review');
+    expect(screen.getByRole('status')).toHaveTextContent('Audio only');
   });
 });

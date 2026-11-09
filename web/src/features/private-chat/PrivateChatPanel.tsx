@@ -135,15 +135,15 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
   return (
     <div className="private-chat-panel">
       <p className="chat-privacy-note private-chat-panel-note">
-        Your questions are private and aren’t saved or shared. Answers link to the transcript passages and presenter materials they use.
+        Only you see your questions. Answers link back to what was said.
       </p>
       <section className={`chat-thread${messages.length > 0 ? ' has-messages' : ''}`} aria-label="Private conversation" aria-live="polite">
         {messages.length === 0 ? (
           <div className="chat-welcome">
-            <p>{hasReleasedSpeech ? 'Ask a question or choose one below.' : 'You can ask once the first transcript lines appear.'}</p>
+            <p>{hasReleasedSpeech ? 'Ask anything about the talk so far.' : 'You can ask once the talk starts.'}</p>
             {snapshot.suggestedQuestions.length > 0 && (
               <>
-                <p className="suggestion-heading">Suggested questions</p>
+                <p className="suggestion-heading">Try asking</p>
                 <ul className="chat-suggestions">
                   {snapshot.suggestedQuestions.map((question) => (
                     <li key={question}>
@@ -175,7 +175,7 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
                         <span className="chat-citation-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                         {citation.kind === 'caption'
                           ? <time>{formatTimestamp(citation.timestampMs)}</time>
-                          : <span className="chat-citation-origin">From slides · {materialLabel(citation)}</span>}
+                          : <span className="chat-citation-origin">From {materialLabel(citation)}</span>}
                         <span className="chat-citation-text">{citation.text}</span>
                       </button>
                     </li>
@@ -185,7 +185,7 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
             )}
           </article>
         ))}
-        {pending && <LoadingIndicator label="Checking the transcript…" />}
+        {pending && <LoadingIndicator label="Finding the answer…" />}
         {chatError && (
           <div className="chat-error" role="alert">
             <span>{chatError}</span>
@@ -200,7 +200,7 @@ function PrivateConversation({ sessionId, snapshot, connectionState, initialQues
           id="private-chat-question"
           rows={3}
           maxLength={500}
-          placeholder={hasReleasedSpeech ? 'Ask about a topic or moment in the talk…' : 'Available when the transcript begins…'}
+          placeholder={hasReleasedSpeech ? 'What did they mean by…' : 'Available once the talk starts'}
           value={draft}
           disabled={!hasReleasedSpeech || pending}
           onChange={(event) => setDraft(event.target.value)}

@@ -109,7 +109,7 @@ export function RecordingSourcePanel({ sessionId, recording, onRecordingAccepted
     return (
       <section className="recording-preparation" aria-busy="true" aria-labelledby="recording-preparation-title">
         <h2 id="recording-preparation-title">Preparing your recording</h2>
-        <p>Attendees can join while the upload finishes.</p>
+        <p>People can join while it uploads.</p>
         <LoadingIndicator label="Uploading recording…" />
       </section>
     );
@@ -117,8 +117,7 @@ export function RecordingSourcePanel({ sessionId, recording, onRecordingAccepted
 
   return (
     <section className="recording-source" aria-labelledby="recording-source-title">
-      <h2 id="recording-source-title">Choose how to share the talk</h2>
-      <p className="recording-source-copy">Play a recording for attendees or start your camera. Topic threads update at the interval you choose.</p>
+      <h2 id="recording-source-title">Start your talk</h2>
 
       <div className="recording-frequency">
         <label htmlFor="recording-update-frequency">Update topic threads</label>
@@ -148,7 +147,7 @@ export function RecordingSourcePanel({ sessionId, recording, onRecordingAccepted
           onChange={(event) => { void chooseFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''; }}
         />
         <button className="button button-accent" type="button" disabled={isUploading || isStartingCamera} onClick={() => fileInput.current?.click()}>
-          {isUploading ? <LoadingIndicator label="Uploading…" compact /> : 'Choose a recording'}
+          {isUploading ? <LoadingIndicator label="Uploading…" compact /> : 'Play a recording'}
         </button>
         <button className="button button-outline" type="button" disabled={isUploading || isStartingCamera} onClick={() => void goLive()}>
           {isStartingCamera ? <LoadingIndicator label="Connecting camera…" compact /> : 'Go live with camera'}

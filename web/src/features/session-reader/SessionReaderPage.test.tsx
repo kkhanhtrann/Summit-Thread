@@ -149,7 +149,7 @@ describe('topic reading', () => {
     const current = screen.getByRole('button', { name: 'Open Cooling neighborhoods at 00:23' });
     expect(within(current).getByText('Current topic')).toBeInTheDocument();
     rerender(<SessionReaderPage snapshot={{ ...paused, recording: { ...paused.recording!, isPlaying: true } }} />);
-    expect(within(current).getByText('Talking about now')).toBeInTheDocument();
+    expect(within(current).getByText('Now')).toBeInTheDocument();
   });
 
   it('announces real topic changes without announcing playback-only updates', () => {

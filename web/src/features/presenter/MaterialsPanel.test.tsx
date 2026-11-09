@@ -34,9 +34,9 @@ describe('MaterialsPanel', () => {
     render(<MaterialsPanel sessionId="AB12CD34" />);
 
     const list = await screen.findByRole('list', { name: 'Talk materials' });
-    expect(within(list).getByText('Fixture notes').closest('li')).toHaveTextContent('Ready · 2 passages');
-    expect(within(list).getByText('Fixture scan').closest('li')).toHaveTextContent('No extractable text');
-    expect(within(list).getByText('Fixture broken').closest('li')).toHaveTextContent('Couldn’t process');
+    expect(within(list).getByText('Fixture notes').closest('li')).toHaveTextContent('Ready');
+    expect(within(list).getByText('Fixture scan').closest('li')).toHaveTextContent('No text found');
+    expect(within(list).getByText('Fixture broken').closest('li')).toHaveTextContent('Couldn’t read this file');
     expect(api.list).toHaveBeenCalledWith('AB12CD34', expect.any(AbortSignal));
   });
 
@@ -67,7 +67,7 @@ describe('MaterialsPanel', () => {
 
     await waitFor(() => expect(api.uploadPdf).toHaveBeenCalledWith('AB12CD34', 'Fixture slides', file, expect.any(Function), expect.any(AbortSignal)));
     expect(await screen.findByText('Fixture slides')).toBeInTheDocument();
-    expect(screen.getByText('Fixture slides').closest('li')).toHaveTextContent('Ready · 4 passages from 4 pages');
+    expect(screen.getByText('Fixture slides').closest('li')).toHaveTextContent('Ready, 4 pages');
   });
 
   it('sends a .pdf file with a blank browser type as application/pdf', async () => {

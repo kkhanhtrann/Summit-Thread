@@ -54,9 +54,9 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
   async function copyInvite(): Promise<void> {
     try {
       await navigator.clipboard.writeText(attendeeUrl);
-      setCopyMessage('Invite link copied.');
+      setCopyMessage('Link copied.');
     } catch {
-      setCopyMessage('Couldn’t copy the link. Copy it above to invite attendees.');
+      setCopyMessage('Couldn’t copy. Select the link above instead.');
     }
   }
 
@@ -80,15 +80,14 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
       <main id="presenter-room" className="presenter-main">
         {!sessionId ? (
           <section className="presenter-create" aria-labelledby="presenter-title">
-            <h1 id="presenter-title">Set up a session</h1>
-            <p className="presenter-intro">Create a room, then share a recording or your camera with attendees.</p>
+            <h1 id="presenter-title">Start a room for your talk</h1>
             <form className="create-session-form" onSubmit={(event) => void submit(event)}>
-              <label htmlFor="session-title">Session name</label>
+              <label htmlFor="session-title">Talk title</label>
               <input
                 id="session-title"
                 autoComplete="off"
                 maxLength={100}
-                placeholder="e.g. Opening keynote"
+                placeholder="Opening keynote"
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 required
@@ -119,7 +118,6 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
             <header className="presenter-session-heading">
               <div>
                 <h1>{snapshot.session.title}</h1>
-                <p className="presenter-intro">Share the room code or invite link, then start a recording or your camera.</p>
               </div>
             </header>
 
@@ -157,28 +155,29 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
                     />
                   )}
                 </section>
+
+                {/* Keep materials as their own step beside the talk controls so presenters add them before starting */}
+                <MaterialsPanel sessionId={sessionId} />
               </div>
 
               <aside className="presenter-room-panel" aria-label="Room details and sharing">
                 <section className="room-invite" aria-labelledby="room-invite-title">
-                  <h2 id="room-invite-title">Invite attendees</h2>
+                  <h2 id="room-invite-title">Invite your audience</h2>
                   <dl className="room-invite-details">
                     <div>
                       <dt>Room code</dt>
                       <dd className="room-code">{snapshot.session.id}</dd>
                     </div>
                     <div className="attendee-invite">
-                      <dt>Attendee link</dt>
+                      <dt>Link</dt>
                       <dd><a href={attendeePath}>{attendeeUrl}</a></dd>
                       <dd>
-                        <button className="button button-outline" type="button" onClick={() => void copyInvite()}>Copy invite link</button>
+                        <button className="button button-outline" type="button" onClick={() => void copyInvite()}>Copy link</button>
                         <p className="copy-message" role="status">{copyMessage}</p>
                       </dd>
                     </div>
                   </dl>
                 </section>
-
-                <MaterialsPanel sessionId={sessionId} />
 
                 {snapshot.threads.length > 0 && (
                   <section className="presenter-topic-preview" aria-labelledby="presenter-topic-title">
@@ -189,7 +188,7 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
                 )}
 
                 <footer className="presenter-room-links">
-                  <a className="button button-outline" href={attendeePath} target="_blank" rel="noreferrer">Open attendee view</a>
+                  <a className="button button-outline" href={attendeePath} target="_blank" rel="noreferrer">See the attendee view</a>
                   <button className="text-action" type="button" onClick={createAnotherRoom}>Create another room</button>
                 </footer>
               </aside>

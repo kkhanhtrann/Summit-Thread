@@ -1,31 +1,45 @@
 # Frontend design
 
-The web app follows the Summit Thread logo: a teal mountain line, an amber sun, and an amber thread. The redesign (issue #18) is frontend only. It changes styles, tokens, fonts, the logo asset, and presentation markup. Backend code, OpenAPI, generated API types, API adapters, state logic, and telemetry are unchanged.
+The web app follows the Summit Thread logo: a teal mountain line, an amber sun, and an amber thread. The first redesign (issue #18) set up tokens, fonts, the logo, and the layouts. Issue #24 replaced its all-teal palette with a warm one and rewrote the customer-facing copy. Both are frontend only: backend code, OpenAPI, generated API types, API adapters, state logic, and telemetry are unchanged.
 
 ## Principles
 
+- **Warm ground, no tint.** A light cream page, warm-white panels, and espresso text. No background or text color is green, teal, blue, or grey.
+- **Coffee top bar.** One dark brown bar runs the full width of every screen and carries the logo.
 - **Amber means "now".** It marks live status, the newest transcript line, the current topic, and the main step into a talk. It is not used for decoration.
-- **Teal is the brand; lagoon carries it into text.** Logo teal decorates lines and fills. The darker lagoon shade is used for text, buttons, and focus.
-- **One bold moment.** The entry screen draws the logo once on load. Everything else stays quiet: white surfaces, generous space, and rounding that follows hierarchy.
+- **Teal stays in the logo.** Logo teal appears in the logo, the entry drawing, the empty-topic trail, and as one of the topic accents. It is never a surface or text color.
+- **Topics get their own colors.** Each topic thread keeps one accent (teal, coral, tangerine, or pink) on its marker and top edge, chosen from first-appearance order so colors never shift when topics reorder.
+- **Clear component edges.** Panels sit on the page with visible borders and shadows; one dark espresso block per screen (invite panel, video panel, your questions in Ask) adds contrast.
 - **Reading first.** Captions and answers use Source Sans 3 at comfortable sizes and line lengths. Display type is reserved for titles and identity.
 
-## Brand colors and contrast
+## Colors and contrast
 
 All values live in `web/src/shared/styles/tokens.css` as `--st-*` custom properties.
 
 | Token | Value | Role | Contrast |
 | --- | --- | --- | --- |
-| `--st-teal` | `#2DD4BF` | Logo teal: lines, fills, decoration | 1.86:1 on white, so never used as text on light surfaces; 8.12:1 on night |
-| `--st-lagoon` | `#0B5F59` | Text, links, primary buttons, focus | 7.51:1 on white; white on lagoon 7.51:1 |
-| `--st-amber` | `#FBBF24` | "Now" fills and markers | 1.67:1 on white, so never used as text on light surfaces; night text on amber 9.05:1 |
-| `--st-ember` | `#8A4B00` | Amber-family text | 6.80:1 on white |
-| `--st-night` | `#0E2A2E` | Ink and dark media panels | 15.12:1 on white |
-| `--st-muted` | `#4A6266` | Secondary text | 6.50:1 on white, 6.14:1 on mist |
-| `--st-mist` | `#F2FAF9` | Page ground | — |
-| `--st-line-strong` | `#6E9C98` | Field borders | 3.06:1 on white (UI boundary) |
-| `--st-error` | `#B42318` | Errors | 6.57:1 on white |
+| `--st-bar` | `#5A3420` | Coffee top bar | Cream text on it 10.14:1; logo teal 5.79:1; logo amber 6.46:1 |
+| `--st-canvas` | `#FBF7F0` | Page ground | Ink 14.64:1; muted 6.20:1 |
+| `--st-surface` | `#FFFDF9` | Panels and cards | Card border `#D9C8AE` 1.61:1 (decorative edge) |
+| `--st-ink` | `#2A221B` | Text and primary buttons | Cream button text on ink 15.16:1 |
+| `--st-muted` | `#6A5A49` | Secondary text | 6.47:1 on panels |
+| `--st-line-strong` | `#8F7D66` | Field borders | 3.85:1 on panels (UI boundary) |
+| `--st-focus` | `#8A4B00` | Focus ring and selected tab | 6.37:1 on the page |
+| `--st-dark` | `#2E241C` | Video panel, invite panel, question bubbles | Cream text 13.40:1; dim text 7.91:1 |
+| `--st-amber` | `#FBBF24` | "Now" fills and the join button | Ink text on amber 9.37:1; never used as text on light surfaces |
+| `--st-ember` | `#8A4B00` | Amber-family text | 6.30:1 on amber-50 |
+| `--st-accent-1…4` | teal `#2DD4BF`, coral `#FB7185`, tangerine `#FB923C`, pink `#F472B6` | Topic markers and edges | Ink numbers on each 5.8–8.4:1 |
+| `--st-error` | `#B42318` | Errors | 6.37:1 on panels |
 
 Every text pairing used in the interface meets WCAG AA. Body text is ≥ 4.5:1, and field boundaries and focus indicators are ≥ 3:1.
+
+## Copy
+
+Customer-facing copy follows what comparable products do: a short benefit-first headline, verb-first buttons of one to three words, and at most one short sentence of help.
+
+- No subtitle that restates its heading or explains how the system works.
+- No joined labels like `A · B`; use a short phrase or a second sentence instead.
+- Speak to the person in plain words ("Read along live. Catch up anytime.", "Only you see your questions.").
 
 ## Typography
 
@@ -41,12 +55,13 @@ The previous reader styles named `"Source Sans 3"`, but the installed package re
 - **Tokens:** `tokens.css` is loaded once in `main.tsx`. `conference-experience.css` (presenter and reader) and `private-chat.css` map their semantic roles (`--color-paper`, `--color-accent`, and so on) onto the brand tokens.
 - **Brand layer:** the final block of `conference-experience.css` holds the redesign's overrides, placed last in the scope so it wins over earlier layers.
 - **Logo:** `web/public/favicon.svg` and the `SummitLogo` and `BrandMark` components in `web/src/shared/ui/BrandMark.tsx`. `BrandMark` keeps the accessible name "Summit Thread home".
-- **Shape:** panels 28px, cards 18px, controls 12px, chips 8px; buttons are pills. Shadows are tinted with night.
+- **Shape:** panels 14px, cards 12px, controls 12px, chips 8px; buttons are pills. Shadows are tinted with espresso.
+- **Top bar:** painted with a `border-image` outset so it reaches both viewport edges without extra markup.
 - **Screens:**
   - Join: headline and drawn logo, with a raised join card and an amber "Join room" button.
-  - Presenter: a white workflow card and a teal-tinted invite panel with a large room code.
-  - Reader: a rounded night media panel; "Live" turns amber. The newest transcript line has an amber marker; topic cards are white, and the current topic gets an amber ring.
-  - Private Ask: question and answer bubbles.
+  - Presenter: a warm-white workflow card, a talk-materials card for slides and notes, and a dark espresso invite panel with a large room code.
+  - Reader: an espresso media panel; "Live" turns amber. The newest transcript line has an amber marker. Topic cards carry their thread's accent, and the current topic gets an amber ring.
+  - Private Ask: dark question bubbles and warm-white answer bubbles.
   - Empty topic trail: a teal path with an amber "now" point.
 - **Labels:** sentence case. The old tracked all-caps labels were removed.
 
@@ -67,26 +82,34 @@ The previous reader styles named `"Source Sans 3"`, but the installed package re
 ## Accessibility checks performed
 
 - Contrast for every token pairing in the table above, computed with the WCAG relative-luminance formula.
-- Keyboard focus reaches the room-code field; focus shows a lagoon border plus a 4px glow ring, confirmed through computed styles.
+- Keyboard focus reaches the room-code field; focus shows a ring plus a 4px glow, confirmed through computed styles. Inside the coffee bar the ring is cream.
 - The invalid-code error renders in error red and stays linked to the field through `aria-describedby`.
-- Existing behavior tests (74) pass unchanged, covering roles, names, dialogs, and focus return.
+- All 82 web behavior tests pass, covering roles, names, dialogs, and focus return. Six assertions were updated only where wording changed.
 - The logo is decorative (`aria-hidden`) wherever visible text names it.
 
 ## Screenshots
 
-Before the redesign (captured at reduced scale):
+Current design (issue #24), desktop:
+
+| Join | Presenter | Reader |
+| --- | --- | --- |
+| ![Join](frontend-design/st09-join.jpg) | ![Presenter](frontend-design/st09-presenter.jpg) | ![Reader](frontend-design/st09-reader.jpg) |
+
+The presenter and reader shots use a seeded synthetic demo room with no real recording, so the video area is empty.
+
+History. Before the first redesign (captured at reduced scale):
 
 | Join | Presenter | Reader |
 | --- | --- | --- |
 | ![Join before](frontend-design/before-join.jpg) | ![Presenter before](frontend-design/before-presenter.jpg) | ![Reader before](frontend-design/before-reader.jpg) |
 
-After, desktop:
+First redesign (issue #18, teal palette, since replaced), desktop:
 
 | Join | Presenter | Reader |
 | --- | --- | --- |
 | ![Join after](frontend-design/after-join.jpg) | ![Presenter after](frontend-design/after-presenter.jpg) | ![Reader after](frontend-design/after-reader.jpg) |
 
-After, 375px mobile:
+First redesign, 375px mobile:
 
 | Join | Presenter | Private Ask |
 | --- | --- | --- |
@@ -113,3 +136,4 @@ Bundle impact, measured against the pre-redesign build of the same commit:
 - Reduced motion was verified by reading the CSS rules, not by emulating the OS setting in a browser.
 - The 200% check doubled the root font size rather than using the browser's own text-size or zoom setting.
 - A dark theme is optional in the issue and was not built.
+- Mobile screenshots for the warm palette were not re-captured; the layouts are unchanged from the first redesign.

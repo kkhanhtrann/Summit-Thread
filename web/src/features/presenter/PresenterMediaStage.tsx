@@ -230,7 +230,7 @@ export function PresenterMediaStage({
     <section className="presenter-media-stage" aria-labelledby="presenter-media-title" aria-label="Presenter recording playback">
       <div className="presenter-media-heading">
         <h2 id="presenter-media-title">{playbackPlaying ? 'Recording is playing' : 'Ready to start'}</h2>
-        <p className="presenter-media-clock" role="status">{playbackPlaying ? 'Playing for attendees' : recording.playbackPositionMs > 0 ? 'Recording is paused' : 'Waiting for you to start'}</p>
+        <p className="presenter-media-clock" role="status">{playbackPlaying ? 'Live for your audience' : recording.playbackPositionMs > 0 ? 'Paused' : 'Not started'}</p>
       </div>
       {recording.mediaKind === 'video' ? (
         <video

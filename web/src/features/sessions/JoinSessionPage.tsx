@@ -23,8 +23,7 @@ export function JoinSessionPage({
       <div className="entry-intro">
         <h1>Follow every word.</h1>
         <p className="lead">
-          Watch the shared recording, read the speaker’s words as they land,
-          and catch up on any topic you missed — at your own pace.
+          Read along live. Catch up anytime.
         </p>
         {/* Draw the logo's mountain line once on load; the page's one orchestrated moment */}
         <SummitLogo className="entry-art" />
@@ -45,7 +44,7 @@ export function JoinSessionPage({
           aria-describedby={error ? 'join-hint join-error' : 'join-hint'}
         />
         <p className="muted" id="join-hint">
-          Use the eight-character code on your invitation.
+          It’s on your invite.
         </p>
         {error && (
           <p role="alert" id="join-error">

@@ -24,10 +24,10 @@ describe('visual moment state', () => {
 
   it('describes pending, audio-only, failed, and complete review states', () => {
     expect(describeVisualReview(null, 0)).toBeNull();
-    expect(describeVisualReview(recording(), 0)?.status).toBe('Stills appear after each 5-minute interval has played');
-    expect(describeVisualReview(recording({ mediaKind: 'audio' }), 0)?.status).toBe('Audio only · no stills to review');
-    expect(describeVisualReview(recording({ analysisState: 'failed' }), 0)?.status).toContain('will retry');
-    expect(describeVisualReview(recording({ analysisState: 'complete' }), 0)?.status).toBe('No useful stills were found');
+    expect(describeVisualReview(recording(), 0)?.status).toBe('Key slides appear as the talk plays');
+    expect(describeVisualReview(recording({ mediaKind: 'audio' }), 0)?.status).toBe('Audio only');
+    expect(describeVisualReview(recording({ analysisState: 'failed' }), 0)?.status).toContain('Trying again');
+    expect(describeVisualReview(recording({ analysisState: 'complete' }), 0)?.status).toBe('No key slides in this talk');
     expect(describeVisualReview(recording({ analysisState: 'complete' }), 2)?.status).toBe('2 stills selected');
   });
 
