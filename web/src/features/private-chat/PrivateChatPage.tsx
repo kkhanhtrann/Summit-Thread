@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PrivateChatPanel, formatTimestamp } from './PrivateChatPanel';
 import { LoadingIndicator } from '../../shared/ui/LoadingIndicator';
+import { BrandMark } from '../../shared/ui/BrandMark';
 import { getPrivateAskContext, type PrivateAskContext } from './api/privateChatApi';
 
 // Load only released Ask context and clear it when the selected room changes
@@ -40,7 +41,7 @@ function RoomPrivateChat({ sessionId }: { sessionId: string }) {
     <div className="app-shell chat-shell">
       <a className="skip-link" href="#private-chat">Skip to private chat</a>
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="Summit Thread home">Summit Thread</a>
+        <BrandMark />
       </header>
       <main className="chat-main" id="private-chat">
         <header className="chat-heading">

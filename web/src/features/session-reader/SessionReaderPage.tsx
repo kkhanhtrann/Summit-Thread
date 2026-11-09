@@ -8,6 +8,7 @@ import { formatThreadUpdateCountdown, useSourceClock, useSessionFeed, type Sessi
 import '../../shared/styles/conference-experience.css';
 import { TopicThreadDialog } from './TopicThreadDialog';
 import { visualMomentsForOccurrence } from './visualMoments';
+import { BrandMark } from '../../shared/ui/BrandMark';
 
 // Identify the room opened from an attendee invite
 interface SessionReaderPageProps {
@@ -309,7 +310,7 @@ export function SessionReaderPage({ snapshot, connectionState = 'connected', err
     <div className={`reader-design app-shell reader-shell${streamExpanded ? ' reader-stream-expanded' : ''}${videoVisible ? '' : ' reader-focus-mode'}`} style={{ '--reader-scale': fontScale } as CSSProperties}>
       <a className="skip-link" href="#session-stream">Skip to the talk</a>
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="Summit Thread home">Summit Thread</a>
+        <BrandMark />
       </header>
 
       <main id="session-stream" className="reader-main">

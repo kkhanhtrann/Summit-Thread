@@ -6,6 +6,7 @@ import { createSession, useSessionFeed, type SessionRecording } from '../session
 import { PresenterMediaStage } from './PresenterMediaStage';
 import { LiveCameraPublisher } from './LiveCameraPublisher';
 import { RecordingSourcePanel } from './RecordingSourcePanel';
+import { BrandMark } from '../../shared/ui/BrandMark';
 
 // Describe the optional room code encoded in a presenter link
 export interface PresenterPageProps {
@@ -72,7 +73,7 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
     <div className="reader-design app-shell presenter-shell">
       <a className="skip-link" href="#presenter-room">Skip to the session controls</a>
       <header className="site-header">
-        <a className="wordmark" href="/" aria-label="Summit Thread home">Summit Thread</a>
+        <BrandMark />
       </header>
 
       <main id="presenter-room" className="presenter-main">
