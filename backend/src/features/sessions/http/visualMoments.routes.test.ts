@@ -1,6 +1,7 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -14,7 +15,10 @@ let imagePath = '';
 
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), 'summit-visual-route-'));
-  imagePath = join(directory, 'moment-0000.jpg');
+  // Mirror the default storage layout, whose .data root must not block released stills
+  const stills = join(directory, '.data', 'recordings', 'ROOMAAAA', 'visual', 'stills');
+  await mkdir(stills, { recursive: true });
+  imagePath = join(stills, 'moment-0000.jpg');
   // Synthetic JPEG header bytes, not recorded media
   await writeFile(imagePath, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
 });
@@ -79,6 +83,16 @@ describe('visual moment routes', () => {
     expect(ahead.status).toBe(409);
     const audio = await request(app).post('/api/sessions/ROOMAAAA/recording/live/windows/0').set('Content-Type', 'audio/webm').send(Buffer.from([1]));
     expect(audio.status).toBe(400);
+  });
+
+  it('documents moment ID patterns in OpenAPI that accept real IDs', () => {
+    const spec = readFileSync(resolve(__dirname, '../../../../openapi.json'), 'utf8');
+    const patterns = [...spec.matchAll(/"pattern": ("\^moment-[^"]*")/g)].map((match) => JSON.parse(match[1]!) as string);
+    expect(patterns.length).toBeGreaterThan(0);
+    for (const pattern of patterns) {
+      expect(new RegExp(pattern).test('moment-0000')).toBe(true);
+      expect(new RegExp(pattern).test('moment-dddd')).toBe(false);
+    }
   });
 
   it('does not mount visual routes until the feature is composed', async () => {

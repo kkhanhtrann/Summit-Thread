@@ -53,7 +53,8 @@ export function createVisualMomentRouter(service: VisualMomentRoutesPort): Route
       // Released stills never change, but stay private to the browser cache
       response.sendFile(image.path, {
         headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=86400' },
-        dotfiles: 'deny'
+        // Allow the ignored .data storage root; the path is built from validated IDs, never from the request
+        dotfiles: 'allow'
       }, (error) => {
         if (error) sendSafeError(response, new VisualImageUnavailableError());
       });

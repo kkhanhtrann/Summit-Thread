@@ -95,7 +95,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^moment-d{4}$"
+              "pattern": "^moment-\\d{4}$"
             }
           }
         ],
@@ -268,7 +268,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^moment-d{4}$"
+            "pattern": "^moment-\\d{4}$"
           },
           "timestampMs": {
             "type": "integer",
