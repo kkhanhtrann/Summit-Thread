@@ -55,7 +55,9 @@ function describeVisualMomentState(recording: SessionRecording | undefined, rele
   if (recording.analysisState === 'failed') return 'Couldn’t check the video';
   if (recording.analysisState === 'analyzing') return releasedCount > 0 ? `${selectedFrames} so far` : 'Looking for key slides';
   if (releasedCount > 0) return `${selectedFrames}${recording.analysisState === 'complete' ? '' : ' so far'}.${gaps}`;
-  if (recording.analysisState === 'complete' || recording.analysisThroughMs > 0) return `No key slides yet.${gaps}`;
+  // A finished review says so plainly; "yet" is only for reviews still in progress
+  if (recording.analysisState === 'complete') return `No key slides in this talk.${gaps}`;
+  if (recording.analysisThroughMs > 0) return `No key slides yet.${gaps}`;
   return 'Key slides appear as the talk plays';
 }
 
