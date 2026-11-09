@@ -5,6 +5,7 @@ import {
   type SessionRecording,
   type SessionSnapshot
 } from '../sessions/public';
+import { PrivateChatPanel } from '../private-chat/public';
 import { TopicThreadDialog } from './TopicThreadDialog';
 
 type ReaderTab = 'topics' | 'transcript';
@@ -369,6 +370,17 @@ export function SessionReaderPage({ snapshot }: { snapshot: SessionSnapshot }) {
           </div>
         </section>
       </div>
+      <section aria-labelledby="private-ask-title" className="reader-private-ask">
+        <h2 id="private-ask-title">Ask privately</h2>
+        <a href={`/ask?session=${encodeURIComponent(snapshot.session.id)}`}>Open private Ask on its own</a>
+        <PrivateChatPanel sessionId={snapshot.session.id} snapshot={snapshot} connectionState="connected" onOpenCitation={id => {
+          // Reveal Ask evidence through the reader's local navigation without seeking media
+          setSelectedOccurrenceId(snapshot.captions.find(caption => caption.id === id)?.occurrenceId ?? null);
+          setSelectedCaptionId(id);
+          setFollowing(false);
+          setActiveTab('transcript');
+        }} />
+      </section>
       <TopicThreadDialog
         thread={openThread}
         initialOccurrenceId={openOccurrenceId}

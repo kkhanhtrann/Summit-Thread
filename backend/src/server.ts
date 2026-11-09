@@ -1,5 +1,8 @@
 import type { Server } from 'node:http';
-import { Client } from '@elastic/elasticsearch';
+import { ElasticsearchCaptionIndex } from './features/search/public';
+import { ReleasedContentRepository, SessionIndexingWorker, SearchUnavailableError } from './features/sessions/public';
+import { PrivateChatService } from './features/private-chat/public';
+import { createGeminiAnswerGenerator } from './platform/ai/geminiAnswerGenerator';
 import { createApp } from './app';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
@@ -22,10 +25,19 @@ import {
 import { createGeminiLiveTranscriptionProvider } from './platform/ai/geminiLiveTranscriptionProvider';
 
 // Compose backend infrastructure without requiring AI credentials for media playback
-const search = new Client({
-  node: env.ELASTICSEARCH_URL,
-  requestTimeout: 2000,
-  maxRetries: 0
+const search = new ElasticsearchCaptionIndex();
+const content = new ReleasedContentRepository(prisma);
+const indexing = new SessionIndexingWorker(content, search);
+const privateChat = new PrivateChatService({
+  sessions: {
+    getReleasedCaptions: async id => (await content.getReleasedContent(id)).captions,
+    searchReleasedCaptions: async (id, query) => {
+      const room = await content.getReleasedContent(id);
+      try { return await search.findReleasedCaptions(id, query, room.captions.map(c => c.id)); }
+      catch { throw new SearchUnavailableError(); }
+    }
+  },
+  generateAnswer: env.GEMINI_API_KEY ? createGeminiAnswerGenerator() : undefined
 });
 const repository = new PrismaRoomRepository(prisma);
 const events = new SessionEventHub();
@@ -63,6 +75,7 @@ async function stop() {
   clearInterval(playbackWatchdog);
   topicWorker.stop();
   await gateway?.close();
+  await indexing.stop();
   server?.close();
   server?.closeAllConnections();
   await Promise.allSettled([prisma.$disconnect(), search.close()]);
@@ -72,13 +85,15 @@ async function stop() {
 async function start() {
   await prisma.$connect();
   await sessions.initialize();
-  // Resume pending intervals and paused tails left by the previous process
+  // Resume released search work and pending topic intervals after restart
   topicWorker.start();
+  indexing.start();
   const app = createApp(
     async () => {
       await Promise.all([prisma.$queryRaw`SELECT 1`, search.ping()]);
     },
-    { sessions, recordings }
+    { sessions, recordings },
+    { service: privateChat, context: id => content.getReleasedContent(id) }
   );
   server = app.listen(env.API_PORT, env.API_HOST, () =>
     logger.info({
