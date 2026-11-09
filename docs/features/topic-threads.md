@@ -22,6 +22,10 @@ Postgres stores requested and active-attempt sequence endpoints, the applied cur
 
 Provider requests disable SDK retries. The durable worker controls backoff. Quota exhaustion defers requests without skipping captions. Repeated non-quota failures can mark the fixed range skipped; captions remain readable and the snapshot exposes the skipped count. Elasticsearch indexing is queued from committed captions and topic assignments.
 
+## Presenter background
+
+When a room has ready presenter materials, each interval request also carries up to five relevant passages (at most 4,000 characters) as `backgroundPassages`, found by searching with the interval's caption text. The analyzer may use them only for accurate terms and spellings. Validation still accepts evidence and segment starts only from released caption IDs, so a material ID used as evidence rejects the plan. If background retrieval fails, analysis continues on speech alone. See the [talk materials guide](talk-materials.md).
+
 ## Configuration and contracts
 
 Keep `GEMINI_API_KEY` and `GEMINI_TEXT_MODEL` in `backend/.env`. Topic generation uses the backend's Vercel AI SDK Google provider. Its output budget scales with interval caption count. Internal analyzer contracts live under `backend/src/platform/ai`; public snapshots and SSE remain backend-owned OpenAPI contracts. No provider credentials or raw error bodies are exposed to the web client or telemetry.

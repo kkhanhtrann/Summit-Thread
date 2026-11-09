@@ -1,12 +1,20 @@
-import type { AnswerGenerator } from '../../../platform/ai/groundedAnswer';
+import type { AnswerGenerator, GroundedSource } from '../../../platform/ai/groundedAnswer';
 import { metrics } from '@opentelemetry/api';
 import { AiUnavailableError } from '../../../platform/ai/aiUnavailableError';
-import type { PrivateChatRequest, PrivateChatResponse } from '../contracts/privateChat.contract';
+import type { PrivateChatCitation, PrivateChatRequest, PrivateChatResponse } from '../contracts/privateChat.contract';
 
 // Describe the persisted caption fields used to ground an answer
 interface ReleasedCaption {
   id: string;
   timestampMs: number;
+  text: string;
+}
+
+// Describe a ready presenter material passage used as supporting context
+interface MaterialPassage {
+  id: string;
+  materialTitle: string;
+  pageNumber: number | null;
   text: string;
 }
 
@@ -16,17 +24,27 @@ export interface PrivateChatDependencies {
     getReleasedCaptions(sessionId: string): Promise<ReleasedCaption[]>;
     searchReleasedCaptions(sessionId: string, query: string, allowedCaptionIds: string[]): Promise<ReleasedCaption[]>;
   };
+  // Retrieve presenter material when material intake is composed
+  materials?: {
+    getReadyPassageIds(sessionId: string): Promise<string[]>;
+    getReadyPassagesByIds(sessionId: string, ids: string[]): Promise<MaterialPassage[]>;
+    searchPassages(sessionId: string, query: string, allowedPassageIds: string[]): Promise<Array<{ id: string }>>;
+  };
   generateAnswer?: AnswerGenerator;
 }
 
 // Return a clear abstention when released evidence is missing
 const NO_GROUNDED_ANSWER = 'The talk hasn’t covered this yet, so I can’t answer from the transcript.';
-// Bound the context supplied to the model
+// Bound the spoken context supplied to the model
 const MAX_SOURCES = 5;
+// Bound presenter material separately so it cannot crowd out spoken evidence
+const MAX_MATERIAL_SOURCES = 3;
 // Group private-chat measurements without question, answer, or passage content
 const chatMeter = metrics.getMeter('summit-thread.private-chat');
 // Count only evidence passages returned after the released-ID check
 const retrievalSourceCount = chatMeter.createHistogram('private_chat.retrieval.source_count', { unit: '{source}' });
+// Count presenter material passages returned after the ready-ID check
+const retrievalMaterialCount = chatMeter.createHistogram('private_chat.retrieval.material_count', { unit: '{source}' });
 // Measure total answer latency with a bounded outcome label
 const answerDuration = chatMeter.createHistogram('private_chat.answer.duration', { unit: 'ms' });
 // Count citations after they are checked against retrieved captions
@@ -34,11 +52,34 @@ const answerCitationCount = chatMeter.createHistogram('private_chat.answer.citat
 // Count failures using fixed provider-state labels only
 const answerFailures = chatMeter.createCounter('private_chat.answer.failures', { unit: '{failure}' });
 
+// Describe one retrieved source and the citation it becomes if the model cites it
+interface RetrievedSource {
+  grounded: GroundedSource;
+  citation: PrivateChatCitation;
+}
+
+// Build the spoken source and caption citation for one released caption
+function captionSource(caption: ReleasedCaption): RetrievedSource {
+  return {
+    grounded: { id: caption.id, kind: 'spoken', timestampMs: caption.timestampMs, text: caption.text.slice(0, 4000) },
+    citation: { kind: 'caption', captionId: caption.id, timestampMs: caption.timestampMs, text: caption.text }
+  };
+}
+
+// Build the material source and material citation for one ready passage
+function materialSource(passage: MaterialPassage): RetrievedSource {
+  const label = passage.pageNumber === null ? passage.materialTitle : `${passage.materialTitle}, page ${passage.pageNumber}`;
+  return {
+    grounded: { id: passage.id, kind: 'material', label, text: passage.text.slice(0, 4000) },
+    citation: { kind: 'material', passageId: passage.id, materialTitle: passage.materialTitle, page: passage.pageNumber, text: passage.text }
+  };
+}
+
 // Retrieve released evidence and validate every returned citation
 export class PrivateChatService {
   constructor(private readonly dependencies: PrivateChatDependencies) {}
 
-  // Answer from released captions and reject citations outside retrieved evidence
+  // Answer from released captions and presenter material, rejecting citations outside retrieved sources
   async ask(sessionId: string, request: PrivateChatRequest): Promise<PrivateChatResponse> {
     const startedAt = performance.now();
     const releasedCaptions = await this.dependencies.sessions.getReleasedCaptions(sessionId);
@@ -46,11 +87,11 @@ export class PrivateChatService {
     // Intersect search results with the current persisted released-caption set
     const releasedById = new Map(releasedCaptions.map((caption) => [caption.id, caption]));
     const allowedCaptionIds = [...releasedById.keys()];
-    const sources = new Map<string, ReleasedCaption>();
+    const sources = new Map<string, RetrievedSource>();
     const contextualSource = request.contextCaptionId
       ? releasedCaptions.find((caption) => caption.id === request.contextCaptionId)
       : undefined;
-    if (contextualSource) sources.set(contextualSource.id, contextualSource);
+    if (contextualSource) sources.set(contextualSource.id, captionSource(contextualSource));
     const queries = this.retrievalQueries(request);
 
     for (const query of queries) {
@@ -63,13 +104,15 @@ export class PrivateChatService {
       }
       for (const hit of hits) {
         const committed = releasedById.get(hit.id);
-        if (committed && !sources.has(hit.id)) sources.set(hit.id, committed);
+        if (committed && !sources.has(hit.id)) sources.set(hit.id, captionSource(committed));
         if (sources.size === MAX_SOURCES) break;
       }
       if (sources.size === MAX_SOURCES) break;
     }
 
-    retrievalSourceCount.record(sources.size);
+    const materialCount = await this.addMaterialSources(sessionId, queries, sources);
+    retrievalSourceCount.record(sources.size - materialCount);
+    retrievalMaterialCount.record(materialCount);
     if (sources.size === 0) {
       answerDuration.record(performance.now() - startedAt, { result: 'abstained' });
       answerCitationCount.record(0);
@@ -87,7 +130,7 @@ export class PrivateChatService {
         question: request.question,
         // Keep the model context to the six most recent chat messages
         history: request.history.slice(-6),
-        sources: [...sources.values()].map(({ id, timestampMs, text }) => ({ id, timestampMs, text: text.slice(0, 4000) }))
+        sources: [...sources.values()].map((source) => source.grounded)
       });
     } catch {
       // Suppress provider errors that may include private question or passage text
@@ -98,13 +141,12 @@ export class PrivateChatService {
 
     const citationIds = [...new Set(generated.citationIds)];
     const validOutput = citationIds.length > 0 && citationIds.every((id) => sources.has(id));
-    const citations = citationIds
-      .flatMap((captionId) => {
-        const caption = sources.get(captionId);
-        return caption ? [{ captionId, timestampMs: caption.timestampMs, text: caption.text }] : [];
-      });
+    const citations = citationIds.flatMap((id) => {
+      const source = sources.get(id);
+      return source ? [source.citation] : [];
+    });
 
-    // Fall back to a directly quoted released passage if the model returns no valid citations
+    // Fall back to a directly quoted retrieved passage if the model returns no valid citations
     if (!validOutput) {
       const closestSource = sources.values().next().value;
       if (!closestSource) {
@@ -115,21 +157,53 @@ export class PrivateChatService {
 
       answerCitationCount.record(1);
       answerDuration.record(performance.now() - startedAt, { result: 'citation_fallback' });
-      const excerpt = closestSource.text.slice(0, 280).trimEnd();
-      const ellipsis = closestSource.text.length > excerpt.length ? '…' : '';
+      const text = closestSource.citation.text;
+      const excerpt = text.slice(0, 280).trimEnd();
+      const ellipsis = text.length > excerpt.length ? '…' : '';
+      // Name the source kind so a material excerpt is never presented as speech
+      const origin = closestSource.citation.kind === 'material' ? 'This passage from the presenter’s materials' : 'This passage';
       return {
-        answer: `I couldn’t verify an answer from the transcript. This passage may help: “${excerpt}${ellipsis}”`,
-        citations: [{
-          captionId: closestSource.id,
-          timestampMs: closestSource.timestampMs,
-          text: closestSource.text
-        }]
+        answer: `I couldn’t verify an answer from the transcript. ${origin} may help: “${excerpt}${ellipsis}”`,
+        citations: [closestSource.citation]
       };
     }
 
     answerCitationCount.record(citations.length);
     answerDuration.record(performance.now() - startedAt, { result: 'answered' });
     return { answer: generated.answer.trim(), citations };
+  }
+
+  // Add ready material passages after spoken evidence; degrade to speech-only if material search fails
+  private async addMaterialSources(sessionId: string, queries: string[], sources: Map<string, RetrievedSource>): Promise<number> {
+    const materials = this.dependencies.materials;
+    if (!materials) return 0;
+    let added = 0;
+    try {
+      // Build the allowlist from IDs only; load text just for the passages kept
+      const allowedPassageIds = await materials.getReadyPassageIds(sessionId);
+      if (!allowedPassageIds.length) return 0;
+      const allowed = new Set(allowedPassageIds);
+      for (const query of queries) {
+        const hits = await materials.searchPassages(sessionId, query, allowedPassageIds);
+        const wanted = [...new Set(hits.map((hit) => hit.id))]
+          .filter((id) => allowed.has(id) && !sources.has(id))
+          .slice(0, MAX_MATERIAL_SOURCES - added);
+        if (!wanted.length) continue;
+        // Use canonical PostgreSQL text rather than the search index copy
+        const committed = new Map((await materials.getReadyPassagesByIds(sessionId, wanted)).map((passage) => [passage.id, passage]));
+        for (const id of wanted) {
+          const passage = committed.get(id);
+          if (!passage) continue;
+          sources.set(id, materialSource(passage));
+          added += 1;
+        }
+        if (added === MAX_MATERIAL_SOURCES) return added;
+      }
+    } catch {
+      // Keep answering from speech when material retrieval is unavailable
+      answerFailures.add(1, { reason: 'material_search_unavailable' });
+    }
+    return added;
   }
 
   // Include the current question and recent user turns as retrieval context

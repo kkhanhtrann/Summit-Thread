@@ -7,6 +7,7 @@ import { PresenterMediaStage } from './PresenterMediaStage';
 import { LiveCameraPublisher } from './LiveCameraPublisher';
 import { RecordingSourcePanel } from './RecordingSourcePanel';
 import { BrandMark } from '../../shared/ui/BrandMark';
+import { MaterialsPanel } from './MaterialsPanel';
 
 // Describe the optional room code encoded in a presenter link
 export interface PresenterPageProps {
@@ -176,6 +177,8 @@ export function PresenterPage({ initialSessionId }: PresenterPageProps) {
                     </div>
                   </dl>
                 </section>
+
+                <MaterialsPanel sessionId={sessionId} />
 
                 {snapshot.threads.length > 0 && (
                   <section className="presenter-topic-preview" aria-labelledby="presenter-topic-title">

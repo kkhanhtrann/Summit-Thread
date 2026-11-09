@@ -9,44 +9,48 @@ datasource db {
 enum SearchIndexOperation {
   index_caption
   delete_session
+  index_material_passage
+  delete_material
 }
 
 model ConferenceSession {
-  id                   String            @id
-  title                String
-  eventName            String
-  speakerName          String
-  contentLabel         String
+  id                                    String             @id
+  title                                 String
+  eventName                             String
+  speakerName                           String
+  contentLabel                          String
   // Let reconnecting SSE clients reject stale events
-  revision             Int               @default(0)
+  revision                              Int                @default(0)
   // Preserve the next attendee-visible caption sequence
-  releasedCount        Int               @default(0)
+  releasedCount                         Int                @default(0)
   // Resume topic analysis from the next caption after this cursor
-  topicAnalysisCursor  Int               @default(0)
+  topicAnalysisCursor                   Int                @default(0)
   // Capture all finalized captions requested by elapsed interval updates
-  topicAnalysisRequestedThroughSequence Int @default(0)
+  topicAnalysisRequestedThroughSequence Int                @default(0)
   // Keep retries attached to the same complete caption range
-  topicAnalysisAttemptThroughSequence Int?
+  topicAnalysisAttemptThroughSequence   Int?
   // Bound repeated failures for the current unreconciled topic batch
-  topicAnalysisFailureCount Int          @default(0)
+  topicAnalysisFailureCount             Int                @default(0)
   // Delay the next analysis attempt after a provider or validation failure
-  topicAnalysisRetryAt DateTime?
+  topicAnalysisRetryAt                  DateTime?
   // Tell attendees when some spoken moments remain outside topic threads
-  topicAnalysisSkippedCaptionCount Int   @default(0)
+  topicAnalysisSkippedCaptionCount      Int                @default(0)
   // Keep the active thread identity stable while it evolves
-  currentTopicThreadId String?
-  currentOccurrenceId  String?
+  currentTopicThreadId                  String?
+  currentOccurrenceId                   String?
   // Refresh attendee question prompts with each analyzed topic batch
-  suggestedQuestions   String[]          @default([])
+  suggestedQuestions                    String[]           @default([])
   // Pause unfinished room capture after a backend restart
-  isLive               Boolean           @default(false)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  captions             CaptionSegment[]
-  searchIndexJobs      SearchIndexJob[]
-  topicThreads         TopicThread[]
-  topicOccurrences     TopicOccurrence[]
-  recording            PreparedRecording?
+  isLive                                Boolean            @default(false)
+  createdAt                             DateTime           @default(now())
+  updatedAt                             DateTime           @updatedAt
+  captions                              CaptionSegment[]
+  searchIndexJobs                       SearchIndexJob[]
+  topicThreads                          TopicThread[]
+  topicOccurrences                      TopicOccurrence[]
+  recording                             PreparedRecording?
+  talkMaterials                         TalkMaterial[]
+  materialPassages                      MaterialPassage[]
 }
 
 enum PreparedRecordingStatus {
@@ -78,27 +82,27 @@ enum RecordingAnalysisState {
 }
 
 model PreparedRecording {
-  sessionId                 String                   @id
-  sourceType                SessionRecordingSource  @default(upload)
-  status                    PreparedRecordingStatus @default(preparing)
-  preparationStage          RecordingPreparationStage?
-  mediaKind                 SessionRecordingKind
-  mimeType                  String
-  durationMs                Int?
-  playbackPositionMs        Int                      @default(0)
-  isPlaying                 Boolean                  @default(false)
-  playbackUpdatedAt         DateTime                 @default(now())
-  analysisWindowMinutes     Int                      @default(5)
-  analysisWindowCount       Int                      @default(0)
+  sessionId                      String                     @id
+  sourceType                     SessionRecordingSource     @default(upload)
+  status                         PreparedRecordingStatus    @default(preparing)
+  preparationStage               RecordingPreparationStage?
+  mediaKind                      SessionRecordingKind
+  mimeType                       String
+  durationMs                     Int?
+  playbackPositionMs             Int                        @default(0)
+  isPlaying                      Boolean                    @default(false)
+  playbackUpdatedAt              DateTime                   @default(now())
+  analysisWindowMinutes          Int                        @default(5)
+  analysisWindowCount            Int                        @default(0)
   // Preserve unknown skip history for recordings created before review diagnostics
   visualReviewSkippedWindowCount Int?
-  analysisThroughMs         Int                      @default(0)
-  analysisState             RecordingAnalysisState   @default(waiting)
-  releasedVisualMomentCount Int                      @default(0)
-  visualMoments             Json                     @default("[]")
-  createdAt                 DateTime                 @default(now())
-  updatedAt                 DateTime                 @updatedAt
-  session                   ConferenceSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  analysisThroughMs              Int                        @default(0)
+  analysisState                  RecordingAnalysisState     @default(waiting)
+  releasedVisualMomentCount      Int                        @default(0)
+  visualMoments                  Json                       @default("[]")
+  createdAt                      DateTime                   @default(now())
+  updatedAt                      DateTime                   @updatedAt
+  session                        ConferenceSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model CaptionSegment {
@@ -119,16 +123,16 @@ model CaptionSegment {
 
 // Preserve a stable topic identity when a talk returns to an earlier subject
 model TopicThread {
-  id          String            @id
-  sessionId   String
-  title       String
-  summary     String
+  id                 String            @id
+  sessionId          String
+  title              String
+  summary            String
   // Retain the released evidence supporting the cumulative thread summary
-  evidenceCaptionIds String[] @default([])
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  session     ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  occurrences TopicOccurrence[]
+  evidenceCaptionIds String[]          @default([])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  session            ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  occurrences        TopicOccurrence[]
 
   @@unique([sessionId, id])
   @@index([sessionId, updatedAt])
@@ -157,14 +161,66 @@ model TopicOccurrence {
 
 // Retry Elasticsearch writes while PostgreSQL remains the source of truth
 model SearchIndexJob {
-  id        String               @id
-  operation SearchIndexOperation
-  sessionId String
+  id         String               @id
+  operation  SearchIndexOperation
+  sessionId  String
   // Leave empty for jobs that remove an entire room from search
-  captionId String?
-  createdAt DateTime             @default(now())
-  session   ConferenceSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  caption   CaptionSegment?      @relation(fields: [captionId], references: [id], onDelete: Cascade)
+  captionId  String?
+  createdAt  DateTime             @default(now())
+  session    ConferenceSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  caption    CaptionSegment?      @relation(fields: [captionId], references: [id], onDelete: Cascade)
+  // Index one presenter material passage; deleting its material cancels pending work
+  passageId  String?
+  passage    MaterialPassage?     @relation(fields: [passageId], references: [id], onDelete: Cascade)
+  // Keep the deleted material ID so its search documents can still be removed
+  materialId String?
 
   @@index([createdAt])
+}
+
+enum TalkMaterialKind {
+  text
+  pdf
+}
+
+enum TalkMaterialStatus {
+  processing
+  ready
+  empty
+  failed
+}
+
+// Hold presenter-provided context separately from released speech
+model TalkMaterial {
+  id           String             @id
+  sessionId    String
+  kind         TalkMaterialKind
+  title        String
+  status       TalkMaterialStatus @default(processing)
+  // Record PDF page count for limits and citations; text materials leave it empty
+  pageCount    Int?
+  passageCount Int                @default(0)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  session      ConferenceSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  passages     MaterialPassage[]
+
+  @@index([sessionId, createdAt])
+}
+
+// Store one bounded, citable span of extracted material text
+model MaterialPassage {
+  id         String            @id
+  sessionId  String
+  materialId String
+  ordinal    Int
+  // Keep the source page so citations can say where a passage came from
+  pageNumber Int?
+  text       String
+  session    ConferenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  material   TalkMaterial      @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  searchJobs SearchIndexJob[]
+
+  @@unique([materialId, ordinal])
+  @@index([sessionId])
 }

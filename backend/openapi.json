@@ -707,6 +707,308 @@
           "$ref": "#/components/parameters/SessionId"
         }
       ]
+    },
+    "/api/sessions/{sessionId}/materials": {
+      "get": {
+        "operationId": "listMaterials",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{8}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Room materials without their text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid room code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Room not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "addTextMaterial",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{8}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTextMaterialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored notes and their final status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid title or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Room not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/materials/pdf": {
+      "post": {
+        "operationId": "uploadPdfMaterial",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{8}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Material-Title",
+            "required": true,
+            "description": "Percent-encoded display title, 1-100 characters",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 26214400
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Extracted PDF and its final status (ready or empty)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid title",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Room not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PDF over 25 MiB or 300 pages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not a PDF",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "PDF could not be read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/materials/{materialId}": {
+      "delete": {
+        "operationId": "deleteMaterial",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{8}$"
+            }
+          },
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Material, passages, and search documents removed"
+          },
+          "400": {
+            "description": "Invalid room code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Room or material not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Dependency unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1370,22 +1672,19 @@
           "citations": {
             "type": "array",
             "items": {
-              "type": "object",
-              "required": [
-                "captionId",
-                "timestampMs",
-                "text"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/CaptionCitation"
+                },
+                {
+                  "$ref": "#/components/schemas/MaterialCitation"
+                }
               ],
-              "properties": {
-                "captionId": {
-                  "type": "string"
-                },
-                "timestampMs": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "text": {
-                  "type": "string"
+              "discriminator": {
+                "propertyName": "kind",
+                "mapping": {
+                  "caption": "#/components/schemas/CaptionCitation",
+                  "material": "#/components/schemas/MaterialCitation"
                 }
               }
             }
@@ -1456,6 +1755,161 @@
         ],
         "properties": {
           "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Material": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "status",
+          "pageCount",
+          "passageCount",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "pdf"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "ready",
+              "empty",
+              "failed"
+            ],
+            "description": "empty means the PDF had no extractable text"
+          },
+          "pageCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "passageCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MaterialResponse": {
+        "type": "object",
+        "required": [
+          "material"
+        ],
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/Material"
+          }
+        }
+      },
+      "MaterialList": {
+        "type": "object",
+        "required": [
+          "materials"
+        ],
+        "properties": {
+          "materials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Material"
+            }
+          }
+        }
+      },
+      "CreateTextMaterialRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "text"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50000
+          }
+        }
+      },
+      "CaptionCitation": {
+        "type": "object",
+        "required": [
+          "kind",
+          "captionId",
+          "timestampMs",
+          "text"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "caption"
+          },
+          "captionId": {
+            "type": "string"
+          },
+          "timestampMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "MaterialCitation": {
+        "type": "object",
+        "required": [
+          "kind",
+          "passageId",
+          "materialTitle",
+          "page",
+          "text"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "material"
+          },
+          "passageId": {
+            "type": "string"
+          },
+          "materialTitle": {
+            "type": "string"
+          },
+          "page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "text": {
             "type": "string"
           }
         }

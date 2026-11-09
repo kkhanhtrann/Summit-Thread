@@ -23,15 +23,24 @@ export class ReleasedContentRepository {
   async getNextIndexJob(): Promise<CaptionIndexJob | null> {
     const job = await this.database.searchIndexJob.findFirst({ orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], include: {
       session: { select: { releasedCount: true } },
-      caption: { include: { topicOccurrence: { include: { thread: true } } } }
+      caption: { include: { topicOccurrence: { include: { thread: true } } } },
+      passage: { include: { material: { select: { title: true, status: true, sessionId: true } } } }
     } });
     if (!job) return null;
     const released = job.caption && job.caption.sessionId === job.sessionId && job.caption.sequence < job.session.releasedCount ? job.caption : null;
+    // Index only passages of ready materials that still belong to the job's room
+    const passage = job.passage && job.passage.sessionId === job.sessionId
+      && job.passage.material.sessionId === job.sessionId && job.passage.material.status === 'ready' ? job.passage : null;
     return {
       id: job.id, operation: job.operation, sessionId: job.sessionId,
       caption: released ? { id: released.id, sequence: released.sequence, timestampMs: released.timestampMs, text: released.text } : null,
       topic: released?.topicOccurrence && released.topicOccurrence.sessionId === job.sessionId && released.topicOccurrence.thread.sessionId === job.sessionId
-        ? { title: released.topicOccurrence.thread.title, summary: released.topicOccurrence.thread.summary } : null
+        ? { title: released.topicOccurrence.thread.title, summary: released.topicOccurrence.thread.summary } : null,
+      passage: passage ? {
+        id: passage.id, materialId: passage.materialId, materialTitle: passage.material.title,
+        pageNumber: passage.pageNumber, text: passage.text
+      } : null,
+      materialId: job.materialId
     };
   }
 
@@ -50,8 +59,24 @@ export class ReleasedContentRepository {
         JOIN "ConferenceSession" s ON s.id = c."sessionId"
         WHERE c.sequence < s."releasedCount" AND c.id > ${cursor}
         ORDER BY c.id LIMIT 200`;
-      if (!batch.length) return count;
+      if (!batch.length) return count + await this.enqueueMaterialRebuild();
       await this.database.searchIndexJob.createMany({ data: batch.map(c => ({ id: `rebuild:${c.id}`, sessionId: c.sessionId, captionId: c.id, operation: 'index_caption' as const })), skipDuplicates: true });
+      cursor = batch[batch.length - 1]!.id;
+      count += batch.length;
+    }
+  }
+
+  // Requeue ready presenter material passages so search can be rebuilt from PostgreSQL
+  private async enqueueMaterialRebuild(): Promise<number> {
+    let cursor = '';
+    let count = 0;
+    while (true) {
+      const batch = await this.database.materialPassage.findMany({
+        where: { id: { gt: cursor }, material: { status: 'ready' } },
+        orderBy: { id: 'asc' }, take: 200, select: { id: true, sessionId: true }
+      });
+      if (!batch.length) return count;
+      await this.database.searchIndexJob.createMany({ data: batch.map(p => ({ id: `rebuild:${p.id}`, sessionId: p.sessionId, passageId: p.id, operation: 'index_material_passage' as const })), skipDuplicates: true });
       cursor = batch[batch.length - 1]!.id;
       count += batch.length;
     }

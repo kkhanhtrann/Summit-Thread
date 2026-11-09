@@ -23,7 +23,13 @@ const inputSchema = z.object({
     title: z.string().trim().min(1).max(100),
     summary: z.string().trim().max(600),
     evidenceCaptions: z.array(captionSchema)
-  }).strict()).max(64)
+  }).strict()).max(64),
+  // Bound presenter background so it cannot outweigh the interval's speech
+  backgroundPassages: z.array(z.object({
+    id: z.string().trim().min(1).max(160),
+    title: z.string().trim().min(1).max(100),
+    text: z.string().trim().min(1).max(1_200)
+  }).strict()).max(5).optional()
 }).strict();
 
 // Bound citations to the concise note they support without dropping input speech
@@ -66,6 +72,7 @@ const systemPrompt = [
   'Return exactly the citations supporting each rewritten note; remove claims whose evidence is unavailable.',
   'Never cite another segment, another thread, unreleased content, or invented IDs. Earlier validated segments of the selected thread can support later cumulative summaries.',
   'Attribute uncertain claims to the speaker. Do not infer unsupported conclusions.',
+  'backgroundPassages are presenter-provided notes or slides: use them only to choose accurate terms and spellings. Never cite them, never create or continue a topic from them, and never state what they say unless the captions also say it.',
   'On new or return suggest up to three short grounded listener questions; on continue return an empty list.'
 ].join(' ');
 

@@ -86,4 +86,34 @@ describe('createGeminiTopicAnalyzer', () => {
       existingThreads: [{ ...input.existingThreads[0]!, evidenceCaptions: [] }]
     })).rejects.toThrow('Topic evidence');
   });
+
+  // Synthetic test fixture: a labeled presenter passage used only as background
+  const background = [{ id: 'material-1:0', title: 'Fixture slides', text: 'Fixture slide: evapotranspiration cools streets.' }];
+
+  it('sends presenter background with the interval and tells the model never to cite it', async () => {
+    await createGeminiTopicAnalyzer()({ ...input, backgroundPassages: background });
+    const request = mocks.generateText.mock.calls[0]![0];
+    expect(JSON.parse(request.prompt).backgroundPassages).toEqual(background);
+    expect(request.system).toMatch(/backgroundPassages are presenter-provided/);
+    expect(request.system).toMatch(/Never cite them/);
+  });
+
+  it('rejects presenter material used as topic evidence', async () => {
+    mocks.generateText.mockResolvedValue({ output: { segments: [{ ...segment, summaryEvidenceCaptionIds: ['material-1:0', 'caption-100'] }] } });
+    await expect(createGeminiTopicAnalyzer()({ ...input, backgroundPassages: background })).rejects.toThrow('Topic evidence must belong');
+
+    mocks.generateText.mockResolvedValue({ output: { segments: [{ ...segment, occurrenceEvidenceCaptionIds: ['material-1:0'] }] } });
+    await expect(createGeminiTopicAnalyzer()({ ...input, backgroundPassages: background })).rejects.toThrow('Topic evidence must belong');
+  });
+
+  it('rejects a topic that starts at a material passage instead of a caption', async () => {
+    mocks.generateText.mockResolvedValue({ output: { segments: [{ ...segment, startCaptionId: 'material-1:0' }] } });
+    await expect(createGeminiTopicAnalyzer()({ ...input, backgroundPassages: background })).rejects.toThrow('Topic segments must cover');
+  });
+
+  it('bounds the amount of presenter background before calling the provider', async () => {
+    const tooMany = Array.from({ length: 6 }, (_, index) => ({ ...background[0]!, id: `material-1:${index}` }));
+    await expect(createGeminiTopicAnalyzer()({ ...input, backgroundPassages: tooMany })).rejects.toThrow();
+    expect(mocks.generateText).not.toHaveBeenCalled();
+  });
 });

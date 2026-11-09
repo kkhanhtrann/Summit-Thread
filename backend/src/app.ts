@@ -13,6 +13,8 @@ import {
   type PreparedRecordingRouteService
 } from './features/sessions/http/preparedRecording.routes';
 import {
+  createMaterialRouter,
+  type MaterialRouteService,
   createVisualMomentRouter,
   RecordingConflictError,
   RecordingNotReadyError,
@@ -41,6 +43,7 @@ export interface PrivateAskHttpDependencies {
 export interface AppFeatures {
   camera?: Pick<CameraService, 'startLiveCapture' | 'stopLiveCapture'>;
   visualMoments?: Pick<VisualMomentService, 'getReleasedImage' | 'submitLiveWindow'>;
+  materials?: MaterialRouteService;
 }
 // Compose validated product routes and operational health endpoints
 export function createApp(
@@ -52,7 +55,10 @@ export function createApp(
   const app = express();
   app.use(helmet());
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '32kb', type: 'application/json' }));
+  // Allow pasted presenter notes a larger body while every other JSON route stays small
+  const smallJson = express.json({ limit: '32kb', type: 'application/json' });
+  const materialJson = express.json({ limit: '256kb', type: 'application/json' });
+  app.use((req, res, next) => (req.method === 'POST' && /^\/api\/sessions\/[^/]+\/materials\/?$/.test(req.path) ? materialJson : smallJson)(req, res, next));
   app.use((req, res, next) => {
     const started = performance.now();
     res.on('finish', () => {
@@ -89,6 +95,8 @@ export function createApp(
       });
   });
   if (features.camera) app.use('/api/sessions', createCameraRouter(features.camera));
+  // Mount material routes before shared routes; they answer their own errors
+  if (features.materials) app.use('/api/sessions', createMaterialRouter(features.materials));
   // Mount visual routes first; they answer their own errors without the shared handler
   if (features.visualMoments) app.use('/api/sessions', createVisualMomentRouter(features.visualMoments));
   if (services) {

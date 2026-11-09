@@ -14,6 +14,13 @@ export interface TopicAnalysisThread {
   evidenceCaptions: TopicAnalysisCaption[];
 }
 
+// Supply presenter material as background vocabulary, never as topic evidence
+export interface TopicBackgroundPassage {
+  id: string;
+  title: string;
+  text: string;
+}
+
 // Provide a complete requested interval and prior grounded context
 export interface TopicAnalysisInput {
   captions: TopicAnalysisCaption[];
@@ -21,6 +28,8 @@ export interface TopicAnalysisInput {
   currentThreadId: string | null;
   currentOccurrenceSummary: string | null;
   currentOccurrenceEvidenceCaptions: TopicAnalysisCaption[];
+  // Leave empty when the room has no ready material or retrieval is unavailable
+  backgroundPassages?: TopicBackgroundPassage[];
 }
 
 // Describe one contiguous topic segment beginning at a supplied caption

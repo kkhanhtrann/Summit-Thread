@@ -2,7 +2,7 @@
 
 ## Purpose and attendee flow
 
-Private Ask answers questions using only committed released speech from the selected room. Elasticsearch retrieves candidates; PostgreSQL supplies the actual evidence text and timestamps. Gemini generates a short answer through the backend Vercel AI SDK Google provider. Empty retrieval returns an explicit abstention. Missing, invented, or partly invalid citation IDs return a safe cited excerpt instead of unverified generated text.
+Private Ask answers questions using only committed released speech from the selected room, plus any ready presenter materials (notes or PDFs). Citations are typed: `{ kind: 'caption' }` for spoken evidence and `{ kind: 'material' }` for presenter material, and answers never attribute material-only claims to the speaker; see the [talk materials guide](talk-materials.md). Elasticsearch retrieves candidates; PostgreSQL supplies the actual evidence text and timestamps. Gemini generates a short answer through the backend Vercel AI SDK Google provider. Empty retrieval returns an explicit abstention. Missing, invented, or partly invalid citation IDs return a safe cited excerpt instead of unverified generated text.
 
 The attendee room includes a private Ask tab alongside Topics and Transcript, and `/ask?session=ROOMCODE` opens its independent view. Suggested questions fill the composer; only Ask sends them. A failed question stays visible and can be retried without adding a second user turn. Citation buttons open the released passage at its timestamp. View in transcript focuses the matching caption in the room reader without seeking shared playback; the independent view shows its canonical released passage. Room changes clear the conversation, draft, selected evidence, failed requests and pending work. Conversation state lives only in the mounted browser page and disappears on reload; it is never stored server-side or shared with presenters.
 
@@ -13,7 +13,7 @@ Use the README setup commands with Node 24 and dedicated Compose services. Postg
 ## HTTP contracts and limits
 
 - `POST /api/sessions/{sessionId}/chat`: accepts a 2–500 character trimmed question, up to 8 history messages, and an optional released caption ID (1–160 characters). Each input history message accepts 1–4000 characters and is normalized to at most 1000; the model sees only the latest six messages.
-- At most five evidence passages enter generation, each capped at 4000 characters. Retrieval uses the current question and up to three recent distinct user questions. The versioned index searches caption text plus available topic title/summary.
+- At most five spoken passages and three presenter material passages enter generation, each capped at 4000 characters. If material search fails, Ask answers from speech alone. Retrieval uses the current question and up to three recent distinct user questions. The versioned index searches caption text plus available topic title/summary.
 - `GET /api/sessions/{sessionId}/ask-context`: returns the room title, committed released captions and up to five available suggested questions. The independent view refreshes every five seconds; embedded attendees use their existing room snapshot.
 - Private request bodies are limited to 32 KiB by the shared JSON parser. Responses use `Cache-Control: no-store`. Codes are normalized by browser navigation and validated as eight hexadecimal characters by the API.
 - Invalid input returns 400; missing rooms return 404; unavailable search/generation returns a safe 503. Provider requests have a 30-second timeout and no automatic provider retry; the attendee chooses retry. No provider exception payload reaches the client or telemetry.
@@ -36,7 +36,7 @@ Every Ask loads canonical released captions once; all retrieval queries share th
 npm --prefix backend run search:rebuild
 ```
 
-This command requeues committed released captions in batches of 200, drains indexing and prints only enqueued/pending counts. It does not read recordings or call an AI provider. Existing caption IDs replace the intended documents, so reruns are safe. If Elasticsearch is unavailable, it exits nonzero and leaves durable jobs pending; restore the dedicated search service and rerun, or let the running worker retry. Rebuild does not delete an index or touch unrelated services. Orphan/stale documents remain excluded by the PostgreSQL allowlist.
+This command requeues committed released captions, then ready presenter material passages, in batches of 200, drains indexing and prints only enqueued/pending counts. It does not read recordings or call an AI provider. Existing caption IDs replace the intended documents, so reruns are safe. If Elasticsearch is unavailable, it exits nonzero and leaves durable jobs pending; restore the dedicated search service and rerun, or let the running worker retry. Rebuild does not delete an index or touch unrelated services. Orphan/stale documents remain excluded by the PostgreSQL allowlist.
 
 ## Verification
 

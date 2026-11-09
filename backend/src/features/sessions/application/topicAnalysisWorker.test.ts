@@ -376,3 +376,42 @@ describe('TopicAnalysisWorker', () => {
     worker.stop();
   });
 });
+
+describe('TopicAnalysisWorker presenter background', () => {
+  // Synthetic test fixture: a labeled presenter passage used only as background
+  const background = [{ id: 'material-1:0', title: 'Fixture slides', text: 'Fixture slide: shade lowers street temperature.' }];
+
+  // Build a worker over one pending interval with a replaceable background provider
+  function setup(provider: (sessionId: string, captions: unknown[]) => Promise<typeof background>) {
+    const repository = {
+      getPendingTopicSessionIds: vi.fn().mockResolvedValue(['AB12CD34']),
+      getTopicAnalysisContext: vi.fn().mockResolvedValue({ cursor: 0, failureCount: 0, retryAt: null, input }),
+      applyTopicAnalysis: vi.fn().mockResolvedValue(snapshot)
+    } as unknown as SessionRepositoryPort;
+    const analyzer = vi.fn().mockResolvedValue(result);
+    const worker = new TopicAnalysisWorker(repository, analyzer, { publish: vi.fn(), subscribe: vi.fn() }, 2_000, provider);
+    return { worker, analyzer, repository };
+  }
+
+  it('looks up background for the interval captions and passes it to the analyzer', async () => {
+    const provider = vi.fn().mockResolvedValue(background);
+    const { worker, analyzer, repository } = setup(provider);
+
+    await worker.wake();
+
+    expect(provider).toHaveBeenCalledWith('AB12CD34', input.captions);
+    expect(analyzer).toHaveBeenCalledWith({ ...input, backgroundPassages: background });
+    expect(repository.applyTopicAnalysis).toHaveBeenCalledWith('AB12CD34', 0, 3, result);
+    worker.stop();
+  });
+
+  it('analyzes speech without background when the lookup fails', async () => {
+    const { worker, analyzer, repository } = setup(vi.fn().mockRejectedValue(new Error('PRIVATE_SEARCH_MARKER')));
+
+    await worker.wake();
+
+    expect(analyzer).toHaveBeenCalledWith(input);
+    expect(repository.applyTopicAnalysis).toHaveBeenCalledOnce();
+    worker.stop();
+  });
+});
