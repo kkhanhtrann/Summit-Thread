@@ -16,7 +16,7 @@ npm run install:all
 cp backend/.env.example backend/.env
 cp web/.env.example web/.env.local
 npm run services:up
-npm run db:push
+npm run db:deploy
 npm run dev
 ```
 

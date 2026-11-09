@@ -22,7 +22,9 @@ jobs:
       - run: cp web/.env.example web/.env.local
       - run: npm run install:all
       - run: npm run services:up
-      - run: npm run db:push
+      - run: npm run db:deploy
+      - run: docker compose exec -T postgres psql -U summit_thread -d summit_thread -c "CREATE DATABASE summit_thread_shadow"
+      - run: SHADOW_DATABASE_URL=postgresql://summit_thread:summit_thread_local_only@127.0.0.1:5435/summit_thread_shadow?schema=public npm run db:check
       - run: npm run check
       - name: Verify durable Ask indexing and recovery
         run: npm --prefix backend run test:search:integration

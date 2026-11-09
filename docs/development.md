@@ -1,12 +1,12 @@
 # Local development
 
-Use Node 24 (`.nvmrc`), npm, and Docker Compose v2. Install with `npm ci` and `npm run install:all`. Copy the two environment examples as shown in README, start services, and apply the schema with `npm run db:push`. Start both watchers with `npm run dev`.
+Use Node 24 (`.nvmrc`), npm, and Docker Compose v2. Install with `npm ci` and `npm run install:all`. Copy the two environment examples as shown in README, start services, and apply committed migrations with `npm run db:deploy`. Start both watchers with `npm run dev`.
 
 ## Isolated resources
 
 Compose project: `summit-thread-foundation-local`. PostgreSQL listens on loopback 5435; Elasticsearch listens on loopback 9203. API listens on loopback 3110; web on 5185. Defaults in environment examples, server settings, Vite proxy, and Compose agree. Avoid overriding service ports without updating their client URLs.
 
-`npm run services:down` stops only this Compose project and retains named volumes. `npm run db:push` applies the Prisma schema to the dedicated local database; this is the schema-driven development policy, with no migration deployment command. `npm run db:reset` is explicitly destructive: it drops data in the database identified by backend/.env DATABASE_URL and recreates its schema. Verify that URL targets the dedicated local database before running it. Never use reset on another project's database.
+`npm run services:down` stops only this Compose project and retains named volumes. `npm run db:deploy` applies committed Prisma migrations to the dedicated local database. Use `npm run db:migrate` when changing the Prisma schema during development; it creates or updates a migration, which must be committed with the schema change. `npm run db:check` verifies that the migration history matches the schema and requires the separate `SHADOW_DATABASE_URL` from `backend/.env`; create that dedicated shadow database before running it. `npm run db:reset` is explicitly destructive: it drops data in the database identified by backend/.env DATABASE_URL and recreates its schema. Verify that URL targets the dedicated local database before running it. Never use reset on another project's database.
 
 ## Commands and recovery
 
@@ -14,7 +14,7 @@ Compose project: `summit-thread-foundation-local`. PostgreSQL listens on loopbac
 
 GET `/api/health/live` checks the process only. GET `/api/health/ready` probes PostgreSQL and Elasticsearch and returns 503 with a safe status when dependencies fail. Restart unavailable services and retry the room connection. The frontend shows an explicit recovery action for API startup delay.
 
-CI uses Node 24 and locked dependencies, starts dedicated Compose services, applies the same schema, runs checks/builds and a runtime readiness probe, then stops its services even on failure. AI and telemetry credentials are not required in CI. Keep CI required on protected branches and retain team-controlled merging.
+CI uses Node 24 and locked dependencies, starts dedicated Compose services, applies committed migrations, checks migration/schema drift, runs checks/builds and a runtime readiness probe, then stops its services even on failure. AI and telemetry credentials are not required in CI. Keep CI required on protected branches and retain team-controlled merging.
 
 No fixtures or conference content are seeded. Uploaded sources and visual caches stay in ignored backend/.data/recordings. Run FFmpeg and FFprobe on PATH for visual analysis; source validation also has a pinned packaged probe. See the walkthrough for the integrated flow.
 
