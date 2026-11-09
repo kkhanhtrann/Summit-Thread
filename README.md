@@ -36,3 +36,11 @@ See [development](docs/development.md), [architecture](docs/architecture.md), an
 Follow [the walkthrough](docs/walkthrough.md) for two-browser verification, recording guidance and recovery. Use a team-owned or consented source; keep recordings and participant content in ignored local storage. AI credentials enable transcription, topics, visual review and answers; playback does not require them.
 
 Development used AI-assisted coding, Gitar review and Dash0 operational verification. Their observed results and limits are documented in [development tools](docs/development-tools.md); configuration alone is not proof of execution.
+
+## Radar Cloud deployment
+
+The `main` branch can be deployed to the team-owned Radar Cloud cluster through
+Argo CD. See [Radar deployment](docs/radar-deployment.md) for the one-time
+public-image, Argo application, runtime-secret, and verification steps. The
+hosted hackathon route is `https://summitthread.cnh.radarhq.io`; it is not a
+production authentication boundary.
