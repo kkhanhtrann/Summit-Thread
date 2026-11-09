@@ -1,5 +1,5 @@
 @scope (:root) to (.reader-design) {
-:root {
+:scope {
   font-family: 'Source Sans 3 Variable', sans-serif;
   color: #23332d;
   background: #f6f4ec;

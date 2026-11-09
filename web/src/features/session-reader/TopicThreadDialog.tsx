@@ -92,7 +92,7 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, visua
   function closeDialog(): void {
     dialog.current?.close();
     onClose();
-   
+
   }
 
   // Return one exact released source to the transcript
