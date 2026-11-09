@@ -9,4 +9,4 @@ resources:
 images:
   - name: ghcr.io/kkhanhtrann/summit-thread
     # Keep the recovered image until the post-merge deployment PR pins the FFmpeg-enabled build
-    newTag: 9a9322535b38425c0db5eab8ac63c856be3db317
+    newTag: fc44259cc20d45a820b0ca060ae59f6a03f4764a
