@@ -118,16 +118,55 @@ describe('topic reading', () => {
     vi.restoreAllMocks();
   });
 
-  it('lists topic threads in talk order and marks the current one', () => {
+  it('lists the newest topic first and marks the current one', () => {
     render(<SessionReaderPage snapshot={topicSnapshot()} />);
 
-    const milestones = within(screen.getByRole('list', { name: 'Topic threads in chronological order' })).getAllByRole('button');
+    const milestones = within(screen.getByRole('list', { name: 'Topic threads, latest first' })).getAllByRole('button');
     expect(milestones.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Open Heat across neighborhoods at 00:00',
-      'Open Cooling neighborhoods at 00:23'
+      'Open Cooling neighborhoods at 00:23',
+      'Open Heat across neighborhoods at 00:00'
     ]);
-    expect(milestones[1]).toHaveAttribute('aria-current', 'true');
+    expect(milestones[0]).toHaveAttribute('aria-current', 'true');
     expect(screen.getByText('Came up 2 times')).toBeInTheDocument();
+  });
+
+  it('moves a returning topic above a more recently introduced topic without mutating history', () => {
+    const middleTopic = { ...previousTopic, id: 'thread-3', title: 'Synthetic middle topic', occurrences: [{ ...previousTopic.occurrences[0]!, id: 'visit-3', startedAtMs: 30_000 }] };
+    const original = topicSnapshot({ threads: [previousTopic, currentTopic, middleTopic] });
+    render(<SessionReaderPage snapshot={original} />);
+    const milestones = within(screen.getByRole('list', { name: 'Topic threads, latest first' })).getAllByRole('button');
+    expect(milestones.map(button => button.getAttribute('aria-label'))).toEqual([
+      'Open Cooling neighborhoods at 00:23',
+      'Open Synthetic middle topic at 00:30',
+      'Open Heat across neighborhoods at 00:00'
+    ]);
+    expect(original.threads.map(thread => thread.id)).toEqual(['thread-1', 'thread-2', 'thread-3']);
+  });
+
+  it('labels the playing topic as being discussed now while paused replays keep a current-topic label', () => {
+    const paused = topicSnapshot();
+    const { rerender } = render(<SessionReaderPage snapshot={paused} />);
+    const current = screen.getByRole('button', { name: 'Open Cooling neighborhoods at 00:23' });
+    expect(within(current).getByText('Current topic')).toBeInTheDocument();
+    rerender(<SessionReaderPage snapshot={{ ...paused, recording: { ...paused.recording!, isPlaying: true } }} />);
+    expect(within(current).getByText('Talking about now')).toBeInTheDocument();
+  });
+
+  it('announces real topic changes without announcing playback-only updates', () => {
+    vi.useFakeTimers();
+    const initial = topicSnapshot();
+    const { rerender } = render(<SessionReaderPage snapshot={initial} />);
+    const notice = document.querySelector('.topic-update-notice');
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(screen.queryByText('Topic updated')).not.toBeInTheDocument();
+    rerender(<SessionReaderPage snapshot={{ ...initial, recording: { ...initial.recording!, playbackPositionMs: 51000 } }} />);
+    expect(screen.queryByText('Topic updated')).not.toBeInTheDocument();
+    const updated = { ...initial, threads: [previousTopic, { ...currentTopic, summary: 'Synthetic updated explanation' }] };
+    rerender(<SessionReaderPage snapshot={updated} />);
+    expect(screen.getByText('Topic updated')).toBe(notice);
+    act(() => vi.advanceTimersByTime(4000));
+    expect(screen.queryByText('Topic updated')).not.toBeInTheDocument();
   });
 
   it('counts down to the next topic boundary from the shared source clock', () => {
