@@ -14,7 +14,9 @@
     "test": "vitest run",
     "prisma:generate": "prisma generate",
     "db:push": "npm run prisma:generate && prisma db push",
-    "db:reset": "npm run prisma:generate && prisma db push --force-reset --accept-data-loss"
+    "db:reset": "npm run prisma:generate && prisma db push --force-reset --accept-data-loss",
+    "search:rebuild": "node --import tsx scripts/rebuildSearch.ts",
+    "test:search:integration": "RUN_SEARCH_INTEGRATION=1 vitest run tests/privateAsk.integration.test.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "3.0.142",
