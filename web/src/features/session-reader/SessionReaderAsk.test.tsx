@@ -19,7 +19,7 @@ it('reveals an Ask citation in Transcript without seeking the shared recording',
   expect(screen.queryByRole('button', { name: 'Open Ask citation' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('tab', { name: 'Ask' }));
   fireEvent.click(screen.getByRole('button', { name: 'Open Ask citation' }));
-  expect(screen.getByRole('tab', { name: 'Transcript' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tab', { name: /^Transcript/ })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByText('Synthetic released passage').closest('li')).toHaveFocus();
   expect(video.currentTime).toBe(40);
 });

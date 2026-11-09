@@ -16,6 +16,6 @@ GET `/api/health/live` checks the process only. GET `/api/health/ready` probes P
 
 CI uses Node 24 and locked dependencies, starts dedicated Compose services, applies the same schema, runs checks/builds and a runtime readiness probe, then stops its services even on failure. AI and telemetry credentials are not required in CI. Keep CI required on protected branches and retain team-controlled merging.
 
-No fixtures or conference content are seeded. Media, caption release, AI-provider calls, durable outbox processing, and product recovery belong to their respective feature issues.
+No fixtures or conference content are seeded. Uploaded sources and visual caches stay in ignored backend/.data/recordings. Run FFmpeg and FFprobe on PATH for visual analysis; source validation also has a pinned packaged probe. See the walkthrough for the integrated flow.
 
 For rooms and uploaded playback, `npm run install:all` installs the pinned platform-specific `ffprobe` binary; keep npm optional dependencies enabled. Follow [rooms and playback](features/rooms-and-playback.md). Set the backend-only `GEMINI_API_KEY` for live source-audio transcription. Media remains playable without provider access. `npm run check` also exercises isolated PostgreSQL fixture schemas, so start services and apply the canonical schema first.

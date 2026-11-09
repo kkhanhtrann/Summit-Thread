@@ -4,7 +4,7 @@ Attendees receive a small number of original stills from the room's video, each 
 
 ## User flow
 
-1. The presenter plays an uploaded video or runs a live camera room.
+1. The presenter plays an uploaded video or explicitly starts camera capture. Uploaded video uses elapsed source windows; camera capture submits completed isolated MediaRecorder clips.
 2. When the shared playback clock passes the end of an interval, the backend reviews that interval alone and may pick one useful frame.
 3. The still is released when playback reaches its source timestamp. It then appears in the reader's "On screen" list with its time, title and description.
 4. An attendee can open the still in a dialog, then jump to "Read what was said" or "Open related topic". Neither action seeks the shared media or moves the attendee's reading position. The host reader handles both through callbacks.
@@ -145,8 +145,8 @@ An FFmpeg frame-provenance test decodes a synthetic two-color video. It runs onl
 
 ## Known limits and verification status
 
-- No real provider run and no check of frame provenance on a consented recording have been done in this repository yet. The FFmpeg provenance test was skipped locally because FFmpeg is not installed.
-- Rooms, upload, the playback clock, the event hub and snapshots are now on main, but the service is not yet wired into `server.ts`, playback updates, or snapshots, and the gallery is not mounted in the reader page. Topic threads are still pending.
+- The November 9 real-recording run exposed truncated structured output: the 400-token generation ceiling was consumed by model reasoning (380 reasoning tokens, 6 answer tokens, MAX_TOKENS). A diagnostic rerun with an 8192-token ceiling returned STOP and one validated suggestion (712 reasoning tokens, 70 answer tokens). The subsequent integrated final window completed on its first attempt in 33680 ms, released one original still at source 11:02, and rendered that image and its description inside the topic dialog in Brave. Earlier windows remain accurately marked skipped. FFmpeg/FFprobe are installed.
+- Issue #6 composes the visual service in server.ts, signals it after committed playback updates, restores released metadata in transactional room snapshots, and mounts the gallery in the attendee reader. Topic threads and private Ask are integrated.
 - The Prisma repository has no database-backed test yet.
 - Spoken context uses a fixed 60-second lookback. Late-finalized speech may attach on a later snapshot rather than in the release event.
 - Retries within a window happen in-process. A restart mid-window resumes on the next playback update.

@@ -4,6 +4,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { SessionReaderPage } from './SessionReaderPage';
 import type { SessionSnapshot } from '../sessions/public';
 
+beforeEach(() => { window.history.replaceState({}, '', '/'); });
+
 const snapshot: SessionSnapshot = {
   session: {
     id: 'AB12CD34',
@@ -41,9 +43,9 @@ const snapshot: SessionSnapshot = {
 it('lets an attendee mute locally and retains mute on room updates', () => {
   const { rerender } = render(<SessionReaderPage snapshot={snapshot} />);
   const player = screen.getByLabelText('Shared talk video') as HTMLVideoElement;
-  expect(player.muted).toBe(false);
-  fireEvent.click(screen.getByRole('button', { name: 'Mute sound' }));
   expect(player.muted).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Turn sound on' }));
+  expect(player.muted).toBe(false);
   rerender(
     <SessionReaderPage
       snapshot={{
@@ -53,9 +55,9 @@ it('lets an attendee mute locally and retains mute on room updates', () => {
       }}
     />
   );
-  expect(player.muted).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Unmute sound' }));
   expect(player.muted).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Mute sound' }));
+  expect(player.muted).toBe(true);
   cleanup();
 });
 
@@ -178,10 +180,10 @@ describe('topic reading', () => {
     await user.click(screen.getByRole('button', { name: 'Open Heat across neighborhoods at 00:00' }));
     await user.click(screen.getByRole('button', { name: 'View in transcript' }));
 
-    expect(screen.getByRole('tab', { name: 'Transcript' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /^Transcript/ })).toHaveAttribute('aria-selected', 'true');
     expect(document.getElementById(`caption-${earlier.id}`)).toHaveAttribute('aria-current', 'location');
 
-    await user.click(screen.getByRole('button', { name: 'Return to now' }));
+    await user.click(screen.getByRole('button', { name: /Return to now|Back to current topic/ }));
     expect(document.getElementById(`caption-${earlier.id}`)).not.toHaveAttribute('aria-current');
   });
 
@@ -201,7 +203,7 @@ describe('topic reading', () => {
     })} />);
 
     expect(screen.getByText('Viewing an earlier topic')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Return to now' }));
+    await user.click(screen.getByRole('button', { name: /Return to now|Back to current topic/ }));
     expect(screen.getByText('Current topic', { selector: '.reading-position span' })).toBeInTheDocument();
   });
 
@@ -210,7 +212,7 @@ describe('topic reading', () => {
 
     expect(screen.getByText('Waiting for the first topic')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Listening now' })).toBeInTheDocument();
-    expect(document.querySelector('.topic-waiting-pulse')).toBeInTheDocument();
+    expect(document.querySelector('.topic-empty-visual')).toBeInTheDocument();
   });
 
   it('tells attendees when some speech remains outside topic threads', async () => {
@@ -218,8 +220,8 @@ describe('topic reading', () => {
     render(<SessionReaderPage snapshot={topicSnapshot({ captions: [unthreaded], threads: [], activeOccurrenceId: null, topicAnalysisSkippedCaptionCount: 1 })} />);
 
     expect(screen.getByRole('note')).toHaveTextContent('1 transcript line isn’t grouped into a topic yet');
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Transcript' }));
-    expect(screen.getByRole('tabpanel', { name: 'Transcript' })).toHaveTextContent(unthreaded.text);
+    await userEvent.setup().click(screen.getByRole('tab', { name: /^Transcript/ }));
+    expect(screen.getByRole('tabpanel', { name: /^Transcript/ })).toHaveTextContent(unthreaded.text);
   });
 
   it('moves between Topics and Transcript with the arrow keys', async () => {
@@ -228,8 +230,8 @@ describe('topic reading', () => {
 
     screen.getByRole('tab', { name: 'Topics' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Transcript' })).toHaveFocus();
-    expect(screen.getByRole('tab', { name: 'Transcript' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /^Transcript/ })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: /^Transcript/ })).toHaveAttribute('aria-selected', 'true');
     await user.keyboard('{Home}');
     expect(screen.getByRole('tab', { name: 'Topics' })).toHaveAttribute('aria-selected', 'true');
   });
@@ -242,7 +244,7 @@ describe('topic reading', () => {
     render(<SessionReaderPage snapshot={topicSnapshot()} />);
     expect(scrolled).not.toHaveBeenCalled();
 
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'Transcript' }));
+    await userEvent.setup().click(screen.getByRole('tab', { name: /^Transcript/ }));
 
     expect(scrolled).toHaveBeenLastCalledWith(900);
   });
@@ -251,4 +253,20 @@ describe('topic reading', () => {
     render(<SessionReaderPage snapshot={topicSnapshot()} />);
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
+});
+
+it('resynchronizes buffered media to elapsed presenter time instead of the stale snapshot', () => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(20000);
+  render(<SessionReaderPage snapshot={{ ...snapshot, recording: { ...snapshot.recording!, playbackPositionMs: 1000, playbackUpdatedAt: new Date(2000).toISOString() } }} />);
+  const player = screen.getByLabelText('Shared talk video') as HTMLVideoElement;
+  fireEvent.canPlay(player);
+  expect(player.currentTime).toBe(19);
+  now.mockRestore();
+  cleanup();
+});
+
+it('shows released stills before any topic has been produced', () => {
+  render(<SessionReaderPage snapshot={{ ...snapshot, visualMoments: [{ id: 'moment-0000', timestampMs: 1000, topicTitle: 'Synthetic chart', description: 'Synthetic chart description', imageUrl: '/synthetic-frame.jpg', captionId: null, occurrenceId: null, threadId: null }] }} />);
+  expect(screen.getByAltText('Synthetic chart description')).toBeInTheDocument();
+  cleanup();
 });

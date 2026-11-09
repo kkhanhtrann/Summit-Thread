@@ -1,3 +1,5 @@
+import { createCameraRouter } from './features/sessions/http/camera.routes';
+import type { CameraService } from './features/sessions/application/cameraService';
 import express from 'express';
 import helmet from 'helmet';
 import { metrics, trace } from '@opentelemetry/api';
@@ -37,6 +39,7 @@ export interface PrivateAskHttpDependencies {
 }
 // Describe optional features composed by the server once their dependencies exist
 export interface AppFeatures {
+  camera?: Pick<CameraService, 'startLiveCapture' | 'stopLiveCapture'>;
   visualMoments?: Pick<VisualMomentService, 'getReleasedImage' | 'submitLiveWindow'>;
 }
 // Compose validated product routes and operational health endpoints
@@ -85,6 +88,7 @@ export function createApp(
         }
       });
   });
+  if (features.camera) app.use('/api/sessions', createCameraRouter(features.camera));
   // Mount visual routes first; they answer their own errors without the shared handler
   if (features.visualMoments) app.use('/api/sessions', createVisualMomentRouter(features.visualMoments));
   if (services) {

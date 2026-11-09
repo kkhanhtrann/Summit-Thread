@@ -61,6 +61,20 @@ async function room(id: string) {
   await repository.updatePlayback(id, 2500, true);
 }
 describe('PostgreSQL caption release', () => {
+  it('starts a camera room, preserves source time and releases bounded finalized speech', async () => {
+    await repository.createSession({ id: 'CA000001', title: 'Synthetic camera fixture' });
+    expect(typeof repository.beginLiveCapture).toBe('function');
+    const started = await repository.beginLiveCapture('CA000001', 1);
+    expect(started.recording).toMatchObject({ sourceType: 'camera', isPlaying: true, durationMs: null, status: 'ready' });
+    await repository.updatePlayback('CA000001', 2000, true);
+    await expect(repository.releaseCaption('CA000001', 'synthetic-camera-caption', 'Synthetic speech', 1000)).resolves.not.toBeNull();
+    await expect(repository.releaseCaption('CA000001', 'synthetic-future-caption', 'Synthetic future', 100000)).rejects.toThrow();
+    await repository.updatePlayback('CA000001', 2000, false);
+    await expect(repository.updatePlayback('CA000001', 2000, true)).rejects.toThrow();
+    expect((await repository.getSnapshot('CA000001')).captions).toHaveLength(1);
+    await expect(repository.beginLiveCapture('CA000001', 1)).rejects.toThrow();
+  });
+
   it('starts with an empty snapshot and serializes simultaneous final writes and retry IDs', async () => {
     const initial = await repository.createSession({
       id: 'A0000001',

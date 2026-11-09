@@ -1,197 +1,198 @@
-import { useEffect, useRef, useState } from 'react';
-import { uploadRecording, type SessionSnapshot } from '../sessions/public';
-import { PresenterMediaStage } from './PresenterMediaStage';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
-// Offer local presenter controls and a plain attendee invitation
-export function PresenterPage({ snapshot }: { snapshot: SessionSnapshot }) {
-  const code = snapshot.session.id;
-  const invitation = `${window.location.origin}/rooms/${code}`;
-  const [copyState, setCopyState] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [minutes, setMinutes] = useState(5);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState('');
-  const active = useRef(true);
-  const uploadController = useRef<AbortController | null>(null);
+import '../../shared/styles/conference-experience.css';
+import { LoadingIndicator } from '../../shared/ui/LoadingIndicator';
+import { createSession, useSessionFeed, type SessionRecording } from '../sessions/public';
+import { PresenterMediaStage } from './PresenterMediaStage';
+import { LiveCameraPublisher } from './LiveCameraPublisher';
+import { RecordingSourcePanel } from './RecordingSourcePanel';
+
+// Describe the optional room code encoded in a presenter link
+export interface PresenterPageProps {
+  initialSessionId?: string;
+}
+
+// Create a room, prepare its source, and start the shared live session
+export function PresenterPage({ initialSessionId }: PresenterPageProps) {
+  const mounted = useRef(true);
+  const currentRoom = useRef(initialSessionId);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const [title, setTitle] = useState('');
+  const [sessionId, setSessionId] = useState(initialSessionId);
+  currentRoom.current = sessionId;
+  const [createError, setCreateError] = useState('');
+  const [copyMessage, setCopyMessage] = useState('');
+  const [acceptedRecording, setAcceptedRecording] = useState<SessionRecording | null>(null);
+  const [liveCameraStream, setLiveCameraStream] = useState<MediaStream | null>(null);
+  const { snapshot, connectionState, error, retry } = useSessionFeed(sessionId);
+  const attendeePath = useMemo(() => sessionId ? `/rooms/${encodeURIComponent(sessionId)}` : '', [sessionId]);
+  const attendeeUrl = useMemo(() => attendeePath ? `${window.location.origin}${attendeePath}` : '', [attendeePath]);
+  const recording = snapshot?.recording ?? acceptedRecording;
+
   useEffect(() => {
-    active.current = true;
-    return () => {
-      active.current = false;
-      uploadController.current?.abort();
-    };
-  }, []);
-  async function upload() {
-    if (!file) return;
-    if (!file.size || file.size > 300 * 1024 * 1024) {
-      setError('Choose a nonempty recording no larger than 300 MiB.');
-      return;
-    }
-    const aborter = new AbortController();
-    uploadController.current = aborter;
-    setUploading(true);
-    setProgress(0);
-    setError('');
+    if (snapshot?.recording) setAcceptedRecording(snapshot.recording);
+  }, [snapshot?.recording]);
+
+  // Create a fresh live room and keep its link in the address bar
+  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setCreateError('');
     try {
-      await uploadRecording(
-        code,
-        file,
-        minutes,
-        (ratio) => {
-          if (active.current) setProgress(ratio);
-        },
-        aborter.signal
-      );
-    } catch (failure) {
-      if (active.current)
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : 'Upload failed. Choose the file and retry.'
-        );
-    } finally {
-      if (active.current) setUploading(false);
+      const created = await createSession(title.trim());
+      setAcceptedRecording(null);
+      setLiveCameraStream(null);
+      setSessionId(created.session.id);
+      window.history.replaceState({}, '', `/presenter/${encodeURIComponent(created.session.id)}`);
+    } catch (requestError) {
+      setCreateError(requestError instanceof Error ? requestError.message : 'The room could not be created. Try again.');
     }
   }
-  const recording = snapshot.recording;
+
+  // Copy the attendee invitation and announce the result without changing routes
+  async function copyInvite(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(attendeeUrl);
+      setCopyMessage('Invite link copied.');
+    } catch {
+      setCopyMessage('Couldn’t copy the link. Copy it above to invite attendees.');
+    }
+  }
+
+  function createAnotherRoom(): void {
+    setSessionId(undefined);
+    setAcceptedRecording(null);
+    setLiveCameraStream(null);
+    setTitle('');
+    setCreateError('');
+    setCopyMessage('');
+    window.history.replaceState({}, '', '/presenter');
+  }
+
   return (
-    <>
-      <section className="invitation" aria-labelledby="invite-title">
-        <div>
-          <h2 id="invite-title">Invite your attendees</h2>
-          <p>
-            Room code <strong className="room-code">{code}</strong>
-          </p>
-          <a href={invitation}>{invitation}</a>
-        </div>
-        <div>
-          <button
-            className="secondary"
-            onClick={() => {
-              void (
-                navigator.clipboard
-                  ? navigator.clipboard.writeText(invitation)
-                  : Promise.reject()
-              ).then(
-                () => setCopyState('Invitation copied'),
-                () => setCopyState('Copy the invitation link above.')
-              );
-            }}
-          >
-            Copy invitation
-          </button>
-          <p role="status">{copyState}</p>
-        </div>
-      </section>
-      <div className="room-columns">
-        <div>
-          <h2>Recording playback</h2>
-          <p className="muted">
-            These are local demo controls. Anyone with the presenter link can
-            use them.
-          </p>
-          {recording?.status === 'ready' ? (
-            <PresenterMediaStage
-              key={`${code}:${recording.mediaUrl}`}
-              sessionId={code}
-              recording={recording}
-            />
-          ) : (
-            <section aria-label="Upload recording">
-              <label htmlFor="recording">Audio or video recording</label>
+    <div className="reader-design app-shell presenter-shell">
+      <a className="skip-link" href="#presenter-room">Skip to the session controls</a>
+      <header className="site-header">
+        <a className="wordmark" href="/" aria-label="Summit Thread home">Summit Thread</a>
+      </header>
+
+      <main id="presenter-room" className="presenter-main">
+        {!sessionId ? (
+          <section className="presenter-create" aria-labelledby="presenter-title">
+            <h1 id="presenter-title">Set up a session</h1>
+            <p className="presenter-intro">Create a room, then share a recording or your camera with attendees.</p>
+            <form className="create-session-form" onSubmit={(event) => void submit(event)}>
+              <label htmlFor="session-title">Session name</label>
               <input
-                id="recording"
-                type="file"
-                accept="audio/mpeg,audio/mp4,audio/wav,audio/x-wav,audio/webm,audio/ogg,audio/flac,video/mp4,video/webm,video/quicktime"
-                disabled={uploading}
-                onChange={(event) => {
-                  setFile(event.target.files?.[0] ?? null);
-                  setError('');
-                }}
+                id="session-title"
+                autoComplete="off"
+                maxLength={100}
+                placeholder="e.g. Opening keynote"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                required
               />
-              <label htmlFor="interval">Thread update interval</label>
-              <select
-                id="interval"
-                value={minutes}
-                disabled={uploading}
-                onChange={(event) => setMinutes(Number(event.target.value))}
-              >
-                {[1, 3, 5, 10].map((value) => (
-                  <option key={value} value={value}>
-                    {value} {value === 1 ? 'minute' : 'minutes'}
-                  </option>
-                ))}
-              </select>
-              <p className="muted">
-                MP3, M4A, WAV, WebM, Ogg, FLAC, MP4 or MOV with audio. Up to 300
-                MiB and 24 hours. Browser playback support varies.
-              </p>
-              <button
-                disabled={
-                  !file || uploading || recording?.status === 'preparing'
-                }
-                onClick={() => void upload()}
-              >
-                {uploading
-                  ? progress < 1
-                    ? `Uploading ${Math.round(progress * 100)}%`
-                    : 'Validating recording…'
-                  : 'Upload recording'}
+              {createError && <p className="inline-error" role="alert">{createError}</p>}
+              <button className="button button-accent" type="submit" disabled={!title.trim()}>
+                Create room
               </button>
-              {uploading && (
-                <progress
-                  aria-label="Recording upload"
-                  value={progress}
-                  max={1}
-                />
-              )}
-              {recording?.status === 'failed' && (
-                <p role="alert">
-                  The source could not be prepared. Choose a valid file and
-                  retry.
-                </p>
-              )}
-              {error && <p role="alert">{error}</p>}
-            </section>
-          )}
-          <section className="planned" aria-labelledby="planned-title">
-            <h2 id="planned-title">More source options · Planned</h2>
-            <button disabled>Camera intake — Planned</button>
-            <p>
-              Presenters will share camera audio and video with the room. No
-              capture permission is requested here.
-            </p>
-            <button disabled>Streaming platform intake — Planned</button>
-            <p>
-              Presenters will supply a supported stream to play and transcribe
-              in the room. External streams are not connected yet.
-            </p>
+            </form>
           </section>
-        </div>
-        <section aria-labelledby="presenter-caption-title">
-          <h2 id="presenter-caption-title">Released words</h2>
-          {snapshot.captions.length ? (
-            <ol className="captions">
-              {snapshot.captions.map((caption) => (
-                <li key={caption.id}>
-                  <time>{formatTime(caption.timestampMs)}</time>
-                  <p>{caption.text}</p>
-                </li>
-              ))}
-            </ol>
+        ) : !snapshot ? (
+          error ? (
+            <section className="presenter-loading" aria-labelledby="room-unavailable-title">
+            <h1 id="room-unavailable-title">Can’t open this room</h1>
+              <p className="presenter-intro">{error}</p>
+              <div className="presenter-room-links">
+                <button className="button button-accent" type="button" onClick={retry}>Try again</button>
+                <button className="text-action" type="button" onClick={createAnotherRoom}>Create another room</button>
+              </div>
+            </section>
           ) : (
-            <p className="empty">
-              Finalized speech will appear here as the recording plays with
-              transcription connected.
-            </p>
-          )}
-        </section>
-      </div>
-    </>
+            <section className="presenter-loading" aria-busy="true">
+              <LoadingIndicator label={connectionState === 'reconnecting' ? 'Reconnecting to the room…' : 'Opening your room…'} />
+            </section>
+          )
+        ) : (
+          <>
+            <header className="presenter-session-heading">
+              <div>
+                <h1>{snapshot.session.title}</h1>
+                <p className="presenter-intro">Share the room code or invite link, then start a recording or your camera.</p>
+              </div>
+            </header>
+
+            <section className="presenter-workspace" aria-label="Presenter workspace">
+              <div className="presenter-stage-column">
+                <section className="presenter-stream-workflow" aria-label="Session controls">
+                  {recording?.sourceType === 'camera' && liveCameraStream ? (
+                    <LiveCameraPublisher
+                      sessionId={sessionId}
+                      stream={liveCameraStream}
+                      recording={recording}
+                      onEnded={() => setLiveCameraStream(null)}
+                    />
+                  ) : recording?.sourceType === 'camera' ? (
+                    <section className="recording-preparation" aria-labelledby="camera-ended-title">
+                      <h2 id="camera-ended-title">{recording.isPlaying ? 'Camera disconnected' : 'This live session has ended'}</h2>
+                      <p>{recording.isPlaying ? 'Create a new room to go live again.' : 'Attendees can still read the transcript and topic threads.'}</p>
+                    </section>
+                  ) : recording?.status === 'ready' ? (
+                    <PresenterMediaStage sessionId={sessionId} recording={recording} />
+                  ) : (
+                    <RecordingSourcePanel
+                      sessionId={sessionId}
+                      recording={recording}
+                      onRecordingAccepted={setAcceptedRecording}
+                      onLiveCameraStarted={(liveRecording, stream) => {
+                        // Reject late permission or API completion after the room owner leaves
+                        if (!mounted.current || currentRoom.current !== sessionId) {
+                          for (const track of stream.getTracks()) track.stop();
+                          return;
+                        }
+                        setAcceptedRecording(liveRecording);
+                        setLiveCameraStream(stream);
+                      }}
+                    />
+                  )}
+                </section>
+              </div>
+
+              <aside className="presenter-room-panel" aria-label="Room details and sharing">
+                <section className="room-invite" aria-labelledby="room-invite-title">
+                  <h2 id="room-invite-title">Invite attendees</h2>
+                  <dl className="room-invite-details">
+                    <div>
+                      <dt>Room code</dt>
+                      <dd className="room-code">{snapshot.session.id}</dd>
+                    </div>
+                    <div className="attendee-invite">
+                      <dt>Attendee link</dt>
+                      <dd><a href={attendeePath}>{attendeeUrl}</a></dd>
+                      <dd>
+                        <button className="button button-outline" type="button" onClick={() => void copyInvite()}>Copy invite link</button>
+                        <p className="copy-message" role="status">{copyMessage}</p>
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+
+                {snapshot.threads.length > 0 && (
+                  <section className="presenter-topic-preview" aria-labelledby="presenter-topic-title">
+                    <h2 id="presenter-topic-title">Latest topic</h2>
+                    <p className="presenter-topic-name">{snapshot.threads.at(-1)?.title}</p>
+                    <p>{snapshot.captions.length} transcript {snapshot.captions.length === 1 ? 'line' : 'lines'}</p>
+                  </section>
+                )}
+
+                <footer className="presenter-room-links">
+                  <a className="button button-outline" href={attendeePath} target="_blank" rel="noreferrer">Open attendee view</a>
+                  <button className="text-action" type="button" onClick={createAnotherRoom}>Create another room</button>
+                </footer>
+              </aside>
+            </section>
+          </>
+        )}
+      </main>
+    </div>
   );
-}
-// Format the source position consistently in presenter and attendee captions
-function formatTime(ms: number) {
-  const seconds = Math.floor(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }

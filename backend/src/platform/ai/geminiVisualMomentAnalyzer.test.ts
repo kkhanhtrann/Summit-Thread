@@ -46,6 +46,16 @@ describe('Gemini visual moment analyzer', () => {
     expect(fixture.deleted).toEqual(['files/synthetic']);
   });
 
+  it('leaves room for reasoning before the structured answer', async () => {
+    const fixture = fixtureClient(async () => {
+      // Simulate a provider spending its first 400 tokens on reasoning
+      const budget = fixture.requests[0]?.config.maxOutputTokens;
+      return { text: typeof budget === 'number' && budget > 400 ? '{"moments":[]}' : '{"moments":[' };
+    });
+    await expect(analyzerWith(fixture).analyzeWindow(input)).resolves.toEqual({ moments: [] });
+    expect(fixture.deleted).toEqual(['files/synthetic']);
+  });
+
   it('accepts an empty result for a window with no useful frame', async () => {
     const fixture = fixtureClient(async () => ({ text: '{"moments":[]}' }));
     await expect(analyzerWith(fixture).analyzeWindow(input)).resolves.toEqual({ moments: [] });

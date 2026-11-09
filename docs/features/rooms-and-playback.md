@@ -4,14 +4,16 @@ ST-02 gives a presenter a fresh room, an attendee invitation, validated uploaded
 
 ## Presenter and attendee flow
 
-1. Open `/presenter`, enter a trimmed talk title of 1–100 characters, and create a room. The backend generates an eight-character uppercase hexadecimal code; the initial room has no transcript, topic, or visual content.
+1. Open `/presenter`, enter a trimmed session name of 1–100 characters, and create a room. The backend generates an eight-character uppercase hexadecimal code; the initial room has no transcript, topic, or visual content.
 2. Copy the invitation, or share the code. A second browser joins at `/` or opens `/rooms/{code}`. Codes are trimmed and normalized to uppercase. `/presenter/{code}` is the separate local demo control screen; it is not protected administrative access.
-3. Select an audio/video recording and a thread update interval of 1, 3, 5, or 10 minutes (default 5). Upload progress changes to validation, then the native player appears. A failed upload can be retried in the same room. Once speech has been released, the recording cannot be replaced.
+3. Choose **Choose a recording** and a thread update interval of 1, 3, 5, or 10 minutes (default 5). Upload progress changes to validation, then the native player appears. A failed upload can be retried in the same room. Once speech has been released, the recording cannot be replaced.
 4. Use the presenter's player to play, pause, seek, resume, or end. Attendees follow the saved source clock. They may need to click **Enable playback** or **Play sound** to satisfy autoplay rules. Browser loading and unsupported formats have separate recovery messages.
 5. The presenter captures audio from the playing file, never a microphone. With the backend provider connected, final speech appears progressively at source positions in both views. Interim recognition is transient and never enters a room snapshot, indexing job, or attendee event.
 6. Attendees can scroll through earlier released words without being pulled to the newest line. **Return to newest caption** restores following. Leaving a room releases subscriptions, source audio, pending upload requests, capture work, and room state.
 
-Camera intake and streaming-platform intake are visibly **Planned**. Their disabled controls explain the intended flow, request no device permission, and do not simulate a connection. Topic processing, original visual stills, released-caption retrieval, and private Ask belong to subsequent feature slices.
+For a fresh room, **Go live with camera** requests camera and microphone permission and starts the existing camera publisher. Attendees receive WebRTC media independently from continuous speech and completed MediaRecorder-window uploads. **End session** flushes speech and queues the final shorter visual window before freezing the source clock. A room that already has an uploaded or ended camera source needs a fresh room for camera intake. Reloading the presenter or losing its signaling connection ends local capture; it does not silently reacquire devices or claim to reconnect. Stopped camera rooms cannot be revived by delayed heartbeats.
+
+Camera signaling uses `/api/live-media/{code}?role=host|attendee`; only allowed browser origins and active camera rooms are accepted. Signals are bounded and room-scoped; media is peer-to-peer. Public camera deployments need authentication and suitable TURN infrastructure, neither supplied by this local demo. Streaming-platform intake remains **Planned**. Actual camera/microphone hardware testing was deliberately omitted at the user's request; deterministic lifecycle and signaling checks are separate evidence.
 
 ## Prerequisites and configuration
 
@@ -93,4 +95,11 @@ A user-authorized demo recording was verified on 2026-11-09 in two isolated Chro
 
 This check covers short passages of the 79-minute source, not the full recording or a provider session rotation. Long-session rotation under real network conditions, recognition accuracy across the whole recording, Firefox capture behavior, and mobile autoplay remain environment-dependent. Re-run the consented two-browser check when changing provider or browser settings.
 
-This is a single-process local demo: room codes are not authentication, source heartbeat expiry is local, and SSE fan-out is process-local. Run one backend process. Search-index jobs are a durable handoff for ST-05; this feature does not implement an indexing worker, search, topics, visual analysis, camera/WebRTC, external-stream intake, or private answers. Keep CI required and leave merges to the team.
+This is a single-process local demo: room codes are not authentication, source heartbeat expiry is local, and SSE fan-out is process-local. Run one backend process. Search-index jobs are a durable handoff for ST-05; the integrated app composes indexing, search, topics, visual analysis and private answers. External-stream intake is not implemented. Keep CI required and leave merges to the team.
+
+## Camera lifecycle contracts
+
+- `POST /api/sessions/{code}/recording/live/start`: `{ analysisWindowMinutes: 1 | 3 | 5 | 10 }`; returns 201 with committed source state
+- `POST /api/sessions/{code}/recording/live/stop`: returns the stopped source state
+- Existing playback updates persist camera heartbeat/source time; non-monotonic or future clock jumps are rejected
+- Completed live windows use the visual-moment route described in the visual guide; provider failure never fabricates a still

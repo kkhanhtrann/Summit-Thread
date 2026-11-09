@@ -79,3 +79,12 @@ describe('recording preparation', () => {
     expect(f.assets.saveUpload).not.toHaveBeenCalled();
   });
 });
+it('signals committed playback for independent analysis without awaiting it', async () => {
+  const f = fixture();
+  const onPlaybackCommitted = vi.fn();
+  f.repository.updatePlayback.mockResolvedValue({ recording: { status: 'ready' }, revision: 3 });
+  const service = new RecordingService({ ...f, onPlaybackCommitted });
+  await service.updatePlayback('AB12CD34', 60000, true);
+  expect(onPlaybackCommitted).toHaveBeenCalledWith('AB12CD34');
+  expect(f.events.publish).toHaveBeenCalled();
+});

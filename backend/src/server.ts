@@ -1,3 +1,8 @@
+import { CameraService, attachLiveMediaWebSocket } from './features/sessions/public';
+import { VisualMomentService, PrismaVisualMomentRepository } from './features/sessions/public';
+import { LocalVisualAssetStore } from './platform/media/localVisualAssets';
+import { createGeminiVisualMomentAnalyzer } from './platform/ai/geminiVisualMomentAnalyzer';
+import { createVisualMomentTelemetry } from './platform/telemetry/visualMomentTelemetry';
 import type { Server } from 'node:http';
 import { ElasticsearchCaptionIndex } from './features/search/public';
 import { ReleasedContentRepository, SessionIndexingWorker, SearchUnavailableError } from './features/sessions/public';
@@ -49,12 +54,19 @@ const topicWorker = env.GEMINI_API_KEY?.trim()
       events
     )
   : { start: () => undefined, wake: async () => undefined, stop: () => undefined };
+const visualMoments = new VisualMomentService({
+  repository: new PrismaVisualMomentRepository(prisma), assets: new LocalVisualAssetStore(),
+  analyzer: createGeminiVisualMomentAnalyzer({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_VISUAL_MODEL }),
+  events, telemetry: createVisualMomentTelemetry()
+});
 const recordings = new RecordingService({
   repository,
   events,
   assets: new LocalRecordingAssetStore(),
+  onPlaybackCommitted: id => { if (stopping) return; void visualMoments.handlePlaybackProgress(id).catch(() => logger.warn({ event: 'visual_progress_failed' })); },
   readDuration: readRecordingDuration
 });
+const camera = new CameraService(repository, events);
 const transcription = new LiveTranscriptionCoordinator({
   provider: createGeminiLiveTranscriptionProvider({
     apiKey: env.GEMINI_API_KEY ?? '',
@@ -64,6 +76,7 @@ const transcription = new LiveTranscriptionCoordinator({
 });
 let server: Server | undefined;
 let gateway: { close(): Promise<void> } | undefined;
+let mediaGateway: { close(): Promise<void> } | undefined;
 let stopping = false;
 let playbackWatchdog: ReturnType<typeof setInterval> | undefined;
 let checkingPlayback = false;
@@ -73,10 +86,12 @@ async function stop() {
   stopping = true;
   clearInterval(playbackWatchdog);
   topicWorker.stop();
+  await mediaGateway?.close();
   await gateway?.close();
   await indexing.stop();
   server?.close();
   server?.closeAllConnections();
+  await visualMoments.waitForIdle();
   await Promise.allSettled([prisma.$disconnect(), search.close()]);
   await shutdownTelemetry();
 }
@@ -92,7 +107,8 @@ async function start() {
       await Promise.all([prisma.$queryRaw`SELECT 1`, search.ping()]);
     },
     { sessions, recordings },
-    { service: privateChat, context: id => content.getReleasedContent(id) }
+    { service: privateChat, context: id => content.getReleasedContent(id) },
+    { visualMoments, camera }
   );
   server = app.listen(env.API_PORT, env.API_HOST, () =>
     logger.info({
@@ -109,23 +125,31 @@ async function start() {
       const recording = await repository.getRecording(id);
       return recording?.status === 'ready' &&
         recording.isPlaying &&
-        recording.durationMs !== null
+        (recording.durationMs !== null || recording.sourceType === 'camera')
         ? {
             positionMs: Math.min(
-              recording.durationMs,
+              recording.durationMs ?? 86_400_000,
               recording.playbackPositionMs +
                 Math.max(
                   0,
                   Date.now() - Date.parse(recording.playbackUpdatedAt)
                 )
             ),
-            durationMs: recording.durationMs,
+            durationMs: recording.durationMs ?? 86_400_000,
             analysisWindowMinutes: recording.analysisWindowMinutes
           }
         : null;
     },
     // Freeze the requested topic range only after flushed caption writes settle
     refreshTopics: (id) => void topicWorker.wake(true, id)
+  });
+  mediaGateway = attachLiveMediaWebSocket(server, {
+    allowedOrigins: new Set(env.WEB_ORIGINS.split(',').map(origin => new URL(origin.trim()).origin)),
+    sessionExists: async id => {
+      const source = await repository.getRecording(id);
+      return source?.sourceType === 'camera' && source.status === 'ready' && source.isPlaying;
+    },
+    onHostDisconnected: async id => { if (!stopping) await camera.stopLiveCapture(id); }
   });
   playbackWatchdog = setInterval(() => {
     if (checkingPlayback) return;

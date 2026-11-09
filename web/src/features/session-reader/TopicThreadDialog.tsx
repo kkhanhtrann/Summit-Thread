@@ -1,18 +1,24 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
 import type { SessionSnapshot } from '../sessions/public';
+import { visualMomentsForOccurrence } from './visualMoments';
 
 type TopicThread = SessionSnapshot['threads'][number];
 type TopicOccurrence = TopicThread['occurrences'][number];
+type VisualMoment = SessionSnapshot['visualMoments'][number];
 
-// Describe the selected thread and the reader actions available from its details
 interface TopicThreadDialogProps {
   thread: TopicThread | null;
   initialOccurrenceId: string | null;
   captions: SessionSnapshot['captions'];
+  visualMoments: VisualMoment[];
+  allOccurrences: TopicOccurrence[];
   sessionTitle: string;
   isCurrent: boolean;
+  canAsk: boolean;
   onClose: () => void;
+  onAsk: () => void;
+  onAskAboutMoment: (question: string, captionId: string) => void;
   onOpenCaption: (threadId: string, occurrenceId: string, captionId: string) => void;
 }
 
@@ -34,15 +40,14 @@ function splitSummarySentences(summary: string): string[] {
     .filter(Boolean);
 }
 
-// Show one topic and its cited visits in a modal dialog without seeking shared media
-export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessionTitle, isCurrent, onClose, onOpenCaption }: TopicThreadDialogProps) {
+// Show one topic and its cited visits in an immersive dialog
+export function TopicThreadDialog({ thread, initialOccurrenceId, captions, visualMoments, allOccurrences, sessionTitle, isCurrent, canAsk, onClose, onAsk, onAskAboutMoment, onOpenCaption }: TopicThreadDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  // Return focus to the control that opened the dialog after it closes
-  const returnFocus = useRef<HTMLElement | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const summaryId = useId();
   const [activeOccurrenceId, setActiveOccurrenceId] = useState<string | null>(null);
+  const [showAllVisualOccurrenceId, setShowAllVisualOccurrenceId] = useState<string | null>(null);
   const orderedOccurrences = thread
     ? [...thread.occurrences].sort((left, right) => left.startedAtMs - right.startedAtMs)
     : [];
@@ -55,35 +60,52 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessi
     .map((captionId) => captionById.get(captionId))
     .filter((caption): caption is NonNullable<typeof caption> => caption !== undefined)
     .sort((left, right) => left.timestampMs - right.timestampMs) ?? [];
+  const activeVisualMoments = activeOccurrence
+    ? visualMomentsForOccurrence(activeOccurrence, visualMoments, allOccurrences)
+    : [];
+  const showAllVisualMoments = activeOccurrence?.id === showAllVisualOccurrenceId;
+  const visibleVisualMoments = showAllVisualMoments ? activeVisualMoments : activeVisualMoments.slice(0, 1);
+  const contextualCaption = activeOccurrence
+    ? evidenceCaptions.reduce<typeof evidenceCaptions[number] | undefined>((closest, caption) => {
+      if (!closest) return caption;
+      const closestDistance = Math.abs(closest.timestampMs - activeOccurrence.startedAtMs);
+      const captionDistance = Math.abs(caption.timestampMs - activeOccurrence.startedAtMs);
+      return captionDistance < closestDistance ? caption : closest;
+    }, undefined)
+    : undefined;
 
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
-    if (thread && !element.open) {
-      // Capture the opener before moving focus into the dialog
-      returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      element.showModal();
-      closeButton.current?.focus();
-    }
-    if (!thread && element.open) {
-      element.close();
-      if (returnFocus.current?.isConnected) returnFocus.current.focus();
-      returnFocus.current = null;
-    }
+    if (thread && !element.open) { opener.current = document.activeElement as HTMLElement; element.showModal(); }
+    if (!thread && element.open) { element.close(); }
   }, [thread?.id]);
 
   useEffect(() => {
     if (!thread) return;
     const initialOccurrence = orderedOccurrences.find((occurrence) => occurrence.id === initialOccurrenceId);
     setActiveOccurrenceId(initialOccurrence?.id ?? orderedOccurrences.at(-1)?.id ?? null);
+    setShowAllVisualOccurrenceId(null);
   }, [initialOccurrenceId, thread?.id]);
+
+  // Close the dialog through its state so focus returns to the opened milestone
+  function closeDialog(): void {
+    dialog.current?.close();
+    onClose();
+
+  }
 
   // Return one exact released source to the transcript
   function openTranscriptSource(occurrence: TopicOccurrence, captionId: string): void {
-    // Let the transcript own focus instead of the milestone that opened the dialog
-    returnFocus.current = null;
     onClose();
     onOpenCaption(thread!.id, occurrence.id, captionId);
+  }
+
+  // Carry the selected released caption into the private answer flow
+  function askAboutOccurrence(occurrence: TopicOccurrence, caption: NonNullable<typeof contextualCaption>): void {
+    const timestamp = formatTimestamp(occurrence.startedAtMs);
+    onAskAboutMoment(`What is the speaker explaining at ${timestamp} in “${thread!.title}”, and how does it fit into the talk?`, caption.id);
+    onClose();
   }
 
   return (
@@ -94,7 +116,7 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessi
       aria-describedby={summaryId}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        closeDialog();
       }}
     >
       {thread && (
@@ -103,7 +125,8 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessi
             <div className="topic-thread-dialog-topline">
               <span className="topic-thread-session">{sessionTitle}</span>
               <div className="topic-thread-dialog-actions">
-                <button ref={closeButton} className="dialog-close-button" type="button" onClick={onClose} aria-label="Close topic details">Close <span aria-hidden="true">×</span></button>
+                {canAsk && <button className="button button-outline" type="button" onClick={() => { onAsk(); onClose(); }}>Ask a question</button>}
+                <button className="dialog-close-button" type="button" autoFocus onClick={closeDialog} aria-label="Close topic details">Close <span aria-hidden="true">×</span></button>
               </div>
             </div>
             <h2 id={titleId}>{thread.title}</h2>
@@ -142,7 +165,10 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessi
                         type="button"
                         aria-pressed={activeOccurrence?.id === occurrence.id}
                         aria-current={activeOccurrence?.id === occurrence.id ? 'true' : undefined}
-                        onClick={() => setActiveOccurrenceId(occurrence.id)}
+                        onClick={() => {
+                          setActiveOccurrenceId(occurrence.id);
+                          setShowAllVisualOccurrenceId(null);
+                        }}
                       >
                         <span className="dialog-visit-topline">
                           <time>{formatTimestamp(occurrence.startedAtMs)}</time>
@@ -173,6 +199,40 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessi
                   <p className="dialog-occurrence-note">{activeOccurrence.summary.trim() !== thread.summary.trim()
                     ? activeOccurrence.summary
                     : 'Transcript passages from this part of the talk appear below.'}</p>
+                  {activeVisualMoments.length > 0 && (
+                    <section className="dialog-visual-moments" aria-labelledby={`${titleId}-visuals`}>
+                      <header className="dialog-visual-heading">
+                        <h4 id={`${titleId}-visuals`}>On screen</h4>
+                        {activeVisualMoments.length > 1 && (
+                          <span>{showAllVisualMoments ? activeVisualMoments.length : 1} of {activeVisualMoments.length} frames</span>
+                        )}
+                      </header>
+                      <ol className={`dialog-visual-strip${showAllVisualMoments ? ' is-expanded' : ''}`}>
+                        {visibleVisualMoments.map((moment) => (
+                          <li key={moment.id}>
+                            <figure className="dialog-visual-moment">
+                              <img src={moment.imageUrl} alt="" loading="lazy" decoding="async" />
+                              <figcaption>
+                                <time>{formatTimestamp(moment.timestampMs)}</time>
+                                <strong>{moment.topicTitle}</strong>
+                                <span>{moment.description}</span>
+                              </figcaption>
+                            </figure>
+                          </li>
+                        ))}
+                      </ol>
+                      {activeVisualMoments.length > 1 && (
+                        <button
+                          className="text-action dialog-visual-toggle"
+                          type="button"
+                          aria-expanded={showAllVisualMoments}
+                          onClick={() => setShowAllVisualOccurrenceId(showAllVisualMoments ? null : activeOccurrence.id)}
+                        >
+                          {showAllVisualMoments ? 'Show one frame' : `Show ${activeVisualMoments.length - 1} more frames`}
+                        </button>
+                      )}
+                    </section>
+                  )}
                   {evidenceCaptions.length > 0 ? (
                     <ol className="dialog-source-list" aria-label="Transcript passages">
                       {evidenceCaptions.map((caption) => (
@@ -189,6 +249,14 @@ export function TopicThreadDialog({ thread, initialOccurrenceId, captions, sessi
                     </ol>
                   ) : (
                     <p className="dialog-source-empty">Transcript passages for this part of the talk aren’t available yet.</p>
+                  )}
+                  {contextualCaption && canAsk && (
+                    <div className="dialog-ask-action">
+                      <button className="button button-accent" type="button" onClick={() => askAboutOccurrence(activeOccurrence, contextualCaption)}>
+                        Ask about this moment
+                      </button>
+                      <span>Your question stays private.</span>
+                    </div>
                   )}
                 </>
               ) : (

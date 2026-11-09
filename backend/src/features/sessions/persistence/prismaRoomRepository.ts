@@ -11,6 +11,7 @@ import {
   type SessionSnapshot,
   type SessionRecordingView
 } from '../contracts/session.contract';
+import { readReleasedMoments } from './prismaVisualMoment.repository';
 import type { RoomRepository } from '../application/roomService';
 import type { RecordingRepository } from '../application/recordingService';
 
@@ -121,7 +122,10 @@ export async function loadSnapshot(
     suggestedQuestions: session.suggestedQuestions,
     topicAnalysisSkippedCaptionCount: session.topicAnalysisSkippedCaptionCount,
     recording: session.recording ? recordingView(session.recording) : null,
-    visualMoments: []
+    visualMoments: session.recording?.mediaKind === 'video' ? readReleasedMoments(session.recording.visualMoments).map(moment => {
+      const spoken = [...captions].reverse().find(caption => caption.timestampMs <= moment.timestampMs && caption.timestampMs >= moment.timestampMs - 60000);
+      return { ...moment, imageUrl: `/api/sessions/${id}/visual-moments/${moment.id}/image`, captionId: spoken?.id ?? null, occurrenceId: spoken?.occurrenceId ?? null, threadId: spoken?.threadId ?? null };
+    }) : []
   };
 }
 // Store released speech, revision cursors and indexing jobs in PostgreSQL
@@ -214,7 +218,7 @@ export class PrismaRoomRepository
       if (
         !Number.isSafeInteger(timestampMs) ||
         timestampMs < 0 ||
-        timestampMs > (room.recording.durationMs ?? 0) ||
+        timestampMs > (room.recording.durationMs ?? room.recording.playbackPositionMs + Math.max(0, Date.now() - room.recording.playbackUpdatedAt.getTime())) ||
         !text.trim() ||
         text.length > 20_000
       )
@@ -272,6 +276,7 @@ export class PrismaRoomRepository
       )
         throw new RecordingConflictError();
       const data = {
+        sourceType: 'upload' as const,
         mimeType,
         mediaKind,
         analysisWindowMinutes: minutes,
@@ -295,6 +300,20 @@ export class PrismaRoomRepository
         recording: recordingView(recording),
         revision: roomUpdate.revision
       };
+    });
+  }
+  // Reserve a fresh camera source and publish its clock under one room revision
+  beginLiveCapture(id: string, minutes: number) {
+    return this.prisma.$transaction(async tx => {
+      await lockRoom(tx, id);
+      const room = await tx.conferenceSession.findUniqueOrThrow({ where: { id }, include: { recording: true } });
+      if (room.recording || room.releasedCount || room.isLive) throw new RecordingConflictError();
+      const recording = await tx.preparedRecording.create({ data: {
+        sessionId: id, sourceType: 'camera', status: 'ready', mediaKind: 'video', mimeType: 'video/webm',
+        durationMs: null, isPlaying: true, analysisWindowMinutes: minutes, visualReviewSkippedWindowCount: 0
+      } });
+      const updated = await tx.conferenceSession.update({ where: { id }, data: { isLive: true, contentLabel: 'Live camera', revision: { increment: 1 } } });
+      return { recording: recordingView(recording), revision: updated.revision };
     });
   }
   // Publish readiness only after source validation has completed
@@ -324,7 +343,9 @@ export class PrismaRoomRepository
         where: { sessionId: id }
       });
       if (current?.status !== 'ready') throw new RecordingNotReadyError();
-      if (positionMs > (current.durationMs ?? 0))
+      // Never revive an ended camera room with a delayed heartbeat
+      if (current.sourceType === 'camera' && !current.isPlaying && isPlaying) throw new RecordingNotReadyError();
+      if (positionMs > (current.durationMs ?? Math.min(86_400_000, current.playbackPositionMs + Math.max(0, Date.now() - current.playbackUpdatedAt.getTime()) + 2000)) || (current.sourceType === 'camera' && positionMs < current.playbackPositionMs))
         throw new RangeError('Invalid source position');
       // Keep release open at source end until the presenter acknowledges finalization
       const playing = isPlaying;
