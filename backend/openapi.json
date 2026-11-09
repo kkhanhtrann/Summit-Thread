@@ -73,32 +73,275 @@
         }
       }
     },
-    "/api/sessions/{sessionId}/visual-moments/{momentId}/image": {
+    "/sessions": {
+      "post": {
+        "operationId": "createSession",
+        "summary": "Create a live conference room",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New room code and empty session snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSnapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ],
+      "get": {
+        "operationId": "getSession",
+        "summary": "Get released captions and current session state",
+        "responses": {
+          "200": {
+            "description": "Current session snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/recording": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ],
+      "post": {
+        "operationId": "uploadSessionRecording",
+        "summary": "Upload an audio or video recording for preparation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "audio/mpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/mp4": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/wav": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/webm": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/mp4": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/webm": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/quicktime": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Recording accepted and preparation started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "415": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Stream a supported audio/video file up to 300 MiB. Validate source duration and audio with ffprobe before readiness. No AI analysis is required."
+      }
+    },
+    "/sessions/{sessionId}/recording/playback": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ],
+      "post": {
+        "operationId": "updateRecordingPlayback",
+        "summary": "Synchronize room playback and release reached content",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaybackUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current recording playback state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/recording/media": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ],
+      "get": {
+        "operationId": "getSessionRecordingMedia",
+        "summary": "Stream the room recording with byte-range seeking",
+        "responses": {
+          "200": {
+            "description": "Room recording content",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Requested recording byte range"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "416": {
+            "description": "Requested byte range is invalid"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/events": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        }
+      ],
+      "get": {
+        "operationId": "subscribeToSessionEvents",
+        "summary": "Receive a fresh snapshot and subsequent session updates",
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}/visual-moments/{momentId}/image": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        },
+        {
+          "name": "momentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^moment-\\d{4}$"
+          }
+        }
+      ],
       "get": {
         "operationId": "getVisualMomentImage",
         "summary": "Read the original still for a released visual moment",
         "description": "Returns image bytes only for a moment already released in this room. Unknown, unreleased, and other-room IDs share one 404 response.",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "description": "Eight-character room code",
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9]{8}$"
-            }
-          },
-          {
-            "name": "momentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^moment-\\d{4}$"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Original frame extracted from the room source",
@@ -116,7 +359,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -124,33 +367,26 @@
         }
       }
     },
-    "/api/sessions/{sessionId}/recording/live/windows/{index}": {
+    "/sessions/{sessionId}/recording/live/windows/{index}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SessionId"
+        },
+        {
+          "name": "index",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999
+          }
+        }
+      ],
       "post": {
         "operationId": "submitLiveVisualWindow",
         "summary": "Submit one completed live-camera clip for visual review",
         "description": "Accepts clips in capture order. Repeating an already committed index is a no-op; a later index is rejected. Attendee media is not carried by this route.",
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "description": "Eight-character room code",
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9]{8}$"
-            }
-          },
-          {
-            "name": "index",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9999
-            }
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -180,36 +416,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "recording"
-                  ],
-                  "properties": {
-                    "recording": {
-                      "$ref": "#/components/schemas/SessionRecordingView"
-                    }
-                  },
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/RecordingResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid room code, index, or clip type",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "$ref": "#/components/responses/BadRequest"
           },
           "409": {
             "description": "Source is not a ready live camera or the clip is out of order",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -219,7 +439,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -229,7 +449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -240,20 +460,308 @@
   },
   "components": {
     "schemas": {
-      "Error": {
+      "Session": {
         "type": "object",
         "required": [
-          "error"
+          "id",
+          "title",
+          "eventName",
+          "speakerName",
+          "contentLabel",
+          "revision",
+          "releasedCount",
+          "isLive"
         ],
         "properties": {
-          "error": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "speakerName": {
+            "type": "string"
+          },
+          "contentLabel": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "releasedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isLive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Caption": {
+        "type": "object",
+        "required": [
+          "id",
+          "sequence",
+          "timestampMs",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timestampMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "occurrenceId": {
             "type": "string"
           }
         }
       },
-      "VisualMomentView": {
+      "TopicOccurrence": {
         "type": "object",
-        "description": "A released original still. Delivered in room snapshots and visual_moment_released events.",
+        "required": [
+          "id",
+          "summary",
+          "startedAtMs",
+          "endedAtMs",
+          "evidenceCaptionIds",
+          "captions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "startedAtMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endedAtMs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "evidenceCaptionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "captions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Caption"
+            }
+          }
+        }
+      },
+      "TopicThread": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "occurrences"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "occurrences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopicOccurrence"
+            }
+          }
+        }
+      },
+      "SessionSnapshot": {
+        "type": "object",
+        "required": [
+          "session",
+          "captions",
+          "threads",
+          "activeOccurrenceId",
+          "suggestedQuestions",
+          "topicAnalysisSkippedCaptionCount",
+          "recording",
+          "visualMoments"
+        ],
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "captions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Caption"
+            }
+          },
+          "threads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopicThread"
+            }
+          },
+          "activeOccurrenceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestedQuestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topicAnalysisSkippedCaptionCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recording": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SessionRecording"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visualMoments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisualMoment"
+            }
+          }
+        }
+      },
+      "SessionRecording": {
+        "type": "object",
+        "required": [
+          "sourceType",
+          "status",
+          "preparationStage",
+          "mediaKind",
+          "mimeType",
+          "durationMs",
+          "playbackPositionMs",
+          "isPlaying",
+          "analysisWindowMinutes",
+          "visualReviewSkippedWindowCount",
+          "analysisThroughMs",
+          "analysisState",
+          "mediaUrl",
+          "playbackUpdatedAt"
+        ],
+        "properties": {
+          "sourceType": {
+            "enum": [
+              "upload",
+              "camera"
+            ]
+          },
+          "status": {
+            "enum": [
+              "preparing",
+              "ready",
+              "failed"
+            ]
+          },
+          "preparationStage": {
+            "enum": [
+              "uploading",
+              null
+            ]
+          },
+          "mediaKind": {
+            "enum": [
+              "audio",
+              "video"
+            ]
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "playbackPositionMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isPlaying": {
+            "type": "boolean"
+          },
+          "analysisWindowMinutes": {
+            "enum": [
+              1,
+              3,
+              5,
+              10
+            ]
+          },
+          "visualReviewSkippedWindowCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "analysisThroughMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "analysisState": {
+            "enum": [
+              "waiting",
+              "analyzing",
+              "ready",
+              "failed",
+              "complete"
+            ]
+          },
+          "mediaUrl": {
+            "type": "string"
+          },
+          "playbackUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VisualMoment": {
+        "type": "object",
         "required": [
           "id",
           "timestampMs",
@@ -264,7 +772,6 @@
           "occurrenceId",
           "threadId"
         ],
-        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
@@ -309,100 +816,290 @@
             ],
             "description": "Topic thread of that occurrence"
           }
-        }
+        },
+        "description": "A released original still. Delivered in room snapshots and visual_moment_released events."
       },
-      "SessionRecordingView": {
+      "RecordingResponse": {
         "type": "object",
         "required": [
-          "sourceType",
-          "status",
-          "preparationStage",
-          "mediaKind",
-          "mimeType",
-          "durationMs",
-          "playbackPositionMs",
-          "isPlaying",
-          "analysisWindowMinutes",
-          "visualReviewSkippedWindowCount",
-          "analysisThroughMs",
-          "analysisState",
-          "mediaUrl"
+          "recording"
         ],
-        "additionalProperties": false,
         "properties": {
-          "sourceType": {
-            "type": "string",
-            "enum": [
-              "upload",
-              "camera"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "preparing",
-              "ready",
-              "failed"
-            ]
-          },
-          "preparationStage": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "uploading",
-              null
-            ]
-          },
-          "mediaKind": {
-            "type": "string",
-            "enum": [
-              "audio",
-              "video"
-            ]
-          },
-          "mimeType": {
-            "type": "string"
-          },
-          "durationMs": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "playbackPositionMs": {
-            "type": "integer"
+          "recording": {
+            "$ref": "#/components/schemas/SessionRecording"
+          }
+        }
+      },
+      "PlaybackUpdate": {
+        "type": "object",
+        "required": [
+          "positionMs",
+          "isPlaying"
+        ],
+        "properties": {
+          "positionMs": {
+            "type": "integer",
+            "minimum": 0
           },
           "isPlaying": {
             "type": "boolean"
-          },
-          "analysisWindowMinutes": {
-            "type": "integer"
-          },
-          "visualReviewSkippedWindowCount": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "description": "Windows abandoned after bounded retries; null when history is unknown"
-          },
-          "analysisThroughMs": {
-            "type": "integer",
-            "description": "Completed-through source time for visual review"
-          },
-          "analysisState": {
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateSessionRequest": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
             "type": "string",
-            "enum": [
-              "waiting",
-              "analyzing",
-              "ready",
-              "failed",
-              "complete"
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "SessionEvent": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SessionSnapshotEvent"
+          },
+          {
+            "$ref": "#/components/schemas/CaptionReleasedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/LiveStatusChangedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/TopicUpdatedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RecordingUpdatedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/VisualMomentReleasedEvent"
+          }
+        ]
+      },
+      "SessionSnapshotEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "session",
+          "captions",
+          "threads",
+          "activeOccurrenceId",
+          "suggestedQuestions",
+          "topicAnalysisSkippedCaptionCount",
+          "recording",
+          "visualMoments"
+        ],
+        "properties": {
+          "type": {
+            "const": "snapshot"
+          },
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "captions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Caption"
+            }
+          },
+          "threads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopicThread"
+            }
+          },
+          "activeOccurrenceId": {
+            "type": [
+              "string",
+              "null"
             ]
           },
-          "mediaUrl": {
+          "suggestedQuestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "topicAnalysisSkippedCaptionCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recording": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SessionRecording"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visualMoments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisualMoment"
+            }
+          }
+        }
+      },
+      "CaptionReleasedEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "revision",
+          "caption"
+        ],
+        "properties": {
+          "type": {
+            "const": "caption_released"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "caption": {
+            "$ref": "#/components/schemas/Caption"
+          }
+        }
+      },
+      "LiveStatusChangedEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "revision",
+          "isLive"
+        ],
+        "properties": {
+          "type": {
+            "const": "live_status_changed"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isLive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TopicUpdatedEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "revision",
+          "snapshot"
+        ],
+        "properties": {
+          "type": {
+            "const": "topic_updated"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/SessionSnapshot"
+          }
+        }
+      },
+      "RecordingUpdatedEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "revision",
+          "recording"
+        ],
+        "properties": {
+          "type": {
+            "const": "recording_updated"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recording": {
+            "$ref": "#/components/schemas/SessionRecording"
+          }
+        }
+      },
+      "VisualMomentReleasedEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "revision",
+          "moment"
+        ],
+        "properties": {
+          "type": {
+            "const": "visual_moment_released"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "moment": {
+            "$ref": "#/components/schemas/VisualMoment"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "SessionId": {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "The request is invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The session does not exist",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "A required service dependency is unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
           }
         }
       }

@@ -47,16 +47,16 @@ const storedWindowSchema = z.object({
 }).strict();
 
 // Store visual analysis inputs, caches, and stills in ignored room-scoped local folders
-// Layout: <root>/<room>/source.media is the agreed uploaded source; visual/ holds clips, windows, and stills
+// Shares the upload store's root: <root>/<room>/source is the uploaded source; visual/ holds clips, windows, and stills
 export class LocalVisualAssetStore implements VisualAssetPort {
   constructor(
-    private readonly storageRoot = resolve(process.cwd(), '../.data/recordings'),
+    private readonly storageRoot = resolve('.data/recordings'),
     private readonly runTool: MediaToolRunner = runMediaTool
   ) {}
 
-  // Return the private uploaded source path written by the media workflow
+  // Return the private uploaded source path written by the upload store
   sourcePath(sessionId: string): string {
-    return join(this.roomDirectory(sessionId), 'source.media');
+    return join(this.roomDirectory(sessionId), 'source');
   }
 
   // Fingerprint the current upload so a replaced source invalidates cached windows

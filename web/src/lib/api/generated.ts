@@ -36,11 +36,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sessions/{sessionId}/visual-moments/{momentId}/image": {
+    "/sessions": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a live conference room */
+        post: operations["createSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        /** Get released captions and current session state */
+        get: operations["getSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}/recording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload an audio or video recording for preparation
+         * @description Stream a supported audio/video file up to 300 MiB. Validate source duration and audio with ffprobe before readiness. No AI analysis is required.
+         */
+        post: operations["uploadSessionRecording"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}/recording/playback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Synchronize room playback and release reached content */
+        post: operations["updateRecordingPlayback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}/recording/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        /** Stream the room recording with byte-range seeking */
+        get: operations["getSessionRecordingMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        /** Receive a fresh snapshot and subsequent session updates */
+        get: operations["subscribeToSessionEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{sessionId}/visual-moments/{momentId}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+                momentId: string;
+            };
             cookie?: never;
         };
         /**
@@ -56,11 +174,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sessions/{sessionId}/recording/live/windows/{index}": {
+    "/sessions/{sessionId}/recording/live/windows/{index}": {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+                index: number;
+            };
             cookie?: never;
         };
         get?: never;
@@ -80,11 +201,73 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Error: {
-            error: string;
+        Session: {
+            id: string;
+            title: string;
+            eventName: string;
+            speakerName: string;
+            contentLabel: string;
+            revision: number;
+            releasedCount: number;
+            isLive: boolean;
+        };
+        Caption: {
+            id: string;
+            sequence: number;
+            timestampMs: number;
+            text: string;
+            threadId?: string;
+            occurrenceId?: string;
+        };
+        TopicOccurrence: {
+            id: string;
+            summary: string;
+            startedAtMs: number;
+            endedAtMs: number | null;
+            evidenceCaptionIds: string[];
+            captions: components["schemas"]["Caption"][];
+        };
+        TopicThread: {
+            id: string;
+            title: string;
+            summary: string;
+            occurrences: components["schemas"]["TopicOccurrence"][];
+        };
+        SessionSnapshot: {
+            session: components["schemas"]["Session"];
+            captions: components["schemas"]["Caption"][];
+            threads: components["schemas"]["TopicThread"][];
+            activeOccurrenceId: string | null;
+            suggestedQuestions: string[];
+            topicAnalysisSkippedCaptionCount: number;
+            recording: components["schemas"]["SessionRecording"] | null;
+            visualMoments: components["schemas"]["VisualMoment"][];
+        };
+        SessionRecording: {
+            /** @enum {unknown} */
+            sourceType: "upload" | "camera";
+            /** @enum {unknown} */
+            status: "preparing" | "ready" | "failed";
+            /** @enum {unknown} */
+            preparationStage: "uploading" | null;
+            /** @enum {unknown} */
+            mediaKind: "audio" | "video";
+            mimeType: string;
+            durationMs: number | null;
+            playbackPositionMs: number;
+            isPlaying: boolean;
+            /** @enum {unknown} */
+            analysisWindowMinutes: 1 | 3 | 5 | 10;
+            visualReviewSkippedWindowCount: number | null;
+            analysisThroughMs: number;
+            /** @enum {unknown} */
+            analysisState: "waiting" | "analyzing" | "ready" | "failed" | "complete";
+            mediaUrl: string;
+            /** Format: date-time */
+            playbackUpdatedAt: string;
         };
         /** @description A released original still. Delivered in room snapshots and visual_moment_released events. */
-        VisualMomentView: {
+        VisualMoment: {
             id: string;
             /** @description Original source time of the frame */
             timestampMs: number;
@@ -100,31 +283,95 @@ export interface components {
             /** @description Topic thread of that occurrence */
             threadId: string | null;
         };
-        SessionRecordingView: {
-            /** @enum {string} */
-            sourceType: "upload" | "camera";
-            /** @enum {string} */
-            status: "preparing" | "ready" | "failed";
-            /** @enum {string|null} */
-            preparationStage: "uploading" | null;
-            /** @enum {string} */
-            mediaKind: "audio" | "video";
-            mimeType: string;
-            durationMs: number | null;
-            playbackPositionMs: number;
+        RecordingResponse: {
+            recording: components["schemas"]["SessionRecording"];
+        };
+        PlaybackUpdate: {
+            positionMs: number;
             isPlaying: boolean;
-            analysisWindowMinutes: number;
-            /** @description Windows abandoned after bounded retries; null when history is unknown */
-            visualReviewSkippedWindowCount: number | null;
-            /** @description Completed-through source time for visual review */
-            analysisThroughMs: number;
-            /** @enum {string} */
-            analysisState: "waiting" | "analyzing" | "ready" | "failed" | "complete";
-            mediaUrl: string;
+        };
+        CreateSessionRequest: {
+            title: string;
+        };
+        SessionEvent: components["schemas"]["SessionSnapshotEvent"] | components["schemas"]["CaptionReleasedEvent"] | components["schemas"]["LiveStatusChangedEvent"] | components["schemas"]["TopicUpdatedEvent"] | components["schemas"]["RecordingUpdatedEvent"] | components["schemas"]["VisualMomentReleasedEvent"];
+        SessionSnapshotEvent: {
+            /** @constant */
+            type: "snapshot";
+            session: components["schemas"]["Session"];
+            captions: components["schemas"]["Caption"][];
+            threads: components["schemas"]["TopicThread"][];
+            activeOccurrenceId: string | null;
+            suggestedQuestions: string[];
+            topicAnalysisSkippedCaptionCount: number;
+            recording: components["schemas"]["SessionRecording"] | null;
+            visualMoments: components["schemas"]["VisualMoment"][];
+        };
+        CaptionReleasedEvent: {
+            /** @constant */
+            type: "caption_released";
+            revision: number;
+            caption: components["schemas"]["Caption"];
+        };
+        LiveStatusChangedEvent: {
+            /** @constant */
+            type: "live_status_changed";
+            revision: number;
+            isLive: boolean;
+        };
+        TopicUpdatedEvent: {
+            /** @constant */
+            type: "topic_updated";
+            revision: number;
+            snapshot: components["schemas"]["SessionSnapshot"];
+        };
+        RecordingUpdatedEvent: {
+            /** @constant */
+            type: "recording_updated";
+            revision: number;
+            recording: components["schemas"]["SessionRecording"];
+        };
+        VisualMomentReleasedEvent: {
+            /** @constant */
+            type: "visual_moment_released";
+            revision: number;
+            moment: components["schemas"]["VisualMoment"];
+        };
+        ErrorResponse: {
+            error: string;
         };
     };
-    responses: never;
-    parameters: never;
+    responses: {
+        /** @description The request is invalid */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The session does not exist */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description A required service dependency is unavailable */
+        Unavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+    };
+    parameters: {
+        SessionId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -186,13 +433,188 @@ export interface operations {
             };
         };
     };
+    createSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description New room code and empty session snapshot */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    getSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current session snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionSnapshot"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    uploadSessionRecording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "audio/mpeg": string;
+                "audio/mp4": string;
+                "audio/wav": string;
+                "audio/webm": string;
+                "video/mp4": string;
+                "video/webm": string;
+                "video/quicktime": string;
+            };
+        };
+        responses: {
+            /** @description Recording accepted and preparation started */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Unavailable"];
+            413: components["responses"]["Unavailable"];
+            415: components["responses"]["BadRequest"];
+        };
+    };
+    updateRecordingPlayback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaybackUpdate"];
+            };
+        };
+        responses: {
+            /** @description Current recording playback state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Unavailable"];
+        };
+    };
+    getSessionRecordingMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Room recording content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Requested recording byte range */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Unavailable"];
+            /** @description Requested byte range is invalid */
+            416: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    subscribeToSessionEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-Sent Events stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     getVisualMomentImage: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Eight-character room code */
-                sessionId: string;
+                sessionId: components["parameters"]["SessionId"];
                 momentId: string;
             };
             cookie?: never;
@@ -214,7 +636,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -224,8 +646,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Eight-character room code */
-                sessionId: string;
+                sessionId: components["parameters"]["SessionId"];
                 index: number;
             };
             cookie?: never;
@@ -244,27 +665,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        recording: components["schemas"]["SessionRecordingView"];
-                    };
+                    "application/json": components["schemas"]["RecordingResponse"];
                 };
             };
-            /** @description Invalid room code, index, or clip type */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
             /** @description Source is not a ready live camera or the clip is out of order */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Clip exceeds the local size limit */
@@ -273,7 +684,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Visual review is temporarily unavailable */
@@ -282,7 +693,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

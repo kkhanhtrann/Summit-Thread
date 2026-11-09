@@ -19,3 +19,6 @@ docker-data/
 .DS_Store
 .idea/
 .vscode/
+
+# Local interface review captures
+.impeccable/review/

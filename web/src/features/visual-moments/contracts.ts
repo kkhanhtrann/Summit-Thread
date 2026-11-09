@@ -1,7 +1,7 @@
 import type { components } from '../../lib/api/generated';
 
 // Describe one released original still as delivered in room snapshots and events
-export type VisualMoment = components['schemas']['VisualMomentView'];
+export type VisualMoment = components['schemas']['VisualMoment'];
 
 // Describe the recording state that carries visual-review progress and diagnostics
-export type VisualReviewRecording = components['schemas']['SessionRecordingView'];
+export type VisualReviewRecording = components['schemas']['SessionRecording'];

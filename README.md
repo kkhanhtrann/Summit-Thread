@@ -4,7 +4,7 @@
 
 ## Current implementation
 
-The local development foundation is implemented. It exposes liveness/readiness and a status page that makes an actual readiness request through the Vite proxy to the backend. Room creation, uploads, transcription, topic processing, and private Ask are subsequent feature work.
+Rooms, uploaded recording playback, shared presenter/attendee controls, and continuous finalized transcription are implemented on the local development foundation. Topic processing, visual analysis, search and private Ask remain subsequent feature work.
 
 ## Run locally
 
@@ -20,11 +20,13 @@ npm run db:push
 npm run dev
 ```
 
-Open http://127.0.0.1:5185. `npm run dev` starts both the backend and frontend in one terminal. Docker services run in the background after `npm run services:up`.
+Open http://127.0.0.1:5185 to join a room, or `/presenter` to create one, share its invitation, upload a recording and control attendee playback. `npm run dev` starts both the backend and frontend in one terminal; Docker services run in the background after `npm run services:up`.
+
+The backend installs a pinned platform-specific `ffprobe` binary for source validation; no system FFmpeg installation is needed. Set the backend-only `GEMINI_API_KEY` for continuous transcription; media playback works without it. See [rooms and playback](docs/features/rooms-and-playback.md) for formats, contracts, recovery and verification status.
 
 ```sh
 npm run check
 npm run services:down
 ```
 
-See [development](docs/development.md), [architecture](docs/architecture.md), and [development tools](docs/development-tools.md). Never commit real environment files, credentials, conference media, participant content, or local service data. No AI-provider key is needed for the foundation. Local demo routes are not authenticated deployment boundaries.
+See [development](docs/development.md), [architecture](docs/architecture.md), and [development tools](docs/development-tools.md). Never commit real environment files, credentials, conference media, participant content, or local service data. No AI-provider key is needed for room creation, uploads or playback. Local demo routes are not authenticated deployment boundaries.

@@ -1,15 +1,25 @@
 // Send typed API requests and surface safe backend error messages
-export async function requestJson<T>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
+export async function requestJson<T>(
+  input: RequestInfo | URL,
+  init: RequestInit = {}
+): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
   const response = await fetch(input, {
     ...init,
+    signal: init.signal
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(10_000)])
+      : AbortSignal.timeout(10_000),
     headers
   });
-  const payload = await response.json().catch(() => null) as { error?: string } | null;
+  const payload = (await response.json().catch(() => null)) as {
+    error?: string;
+  } | null;
   if (!response.ok) {
-    const error = new Error(payload?.error ?? 'The request could not be completed') as Error & { statusCode: number };
+    const error = new Error(
+      payload?.error ?? 'The request could not be completed'
+    ) as Error & { statusCode: number };
     error.statusCode = response.status;
     throw error;
   }
@@ -21,19 +31,39 @@ export function uploadBinary<T>(
   url: string,
   media: Blob,
   onProgress: (ratio: number) => void,
-  extraHeaders: Record<string, string> = {}
+  extraHeaders: Record<string, string> = {},
+  signal?: AbortSignal
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('POST', url);
+    request.timeout = 120_000;
+    const cancel = () => request.abort();
+    signal?.addEventListener('abort', cancel, { once: true });
+    request.onloadend = () => signal?.removeEventListener('abort', cancel);
+    request.ontimeout = () =>
+      reject(
+        new Error('The upload timed out. Check the connection and retry.')
+      );
+    if (signal?.aborted) {
+      reject(new Error('The upload was cancelled.'));
+      return;
+    }
     request.setRequestHeader('Accept', 'application/json');
     request.setRequestHeader('Content-Type', media.type);
-    for (const [name, value] of Object.entries(extraHeaders)) request.setRequestHeader(name, value);
+    for (const [name, value] of Object.entries(extraHeaders))
+      request.setRequestHeader(name, value);
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(event.loaded / event.total);
     };
-    request.onerror = () => reject(new Error('The recording could not be uploaded. Check the connection and try again.'));
-    request.onabort = () => reject(new Error('The recording upload was cancelled.'));
+    request.onerror = () =>
+      reject(
+        new Error(
+          'The recording could not be uploaded. Check the connection and try again.'
+        )
+      );
+    request.onabort = () =>
+      reject(new Error('The recording upload was cancelled.'));
     request.onload = () => {
       let payload: { error?: string } | null = null;
       try {
@@ -42,7 +72,11 @@ export function uploadBinary<T>(
         payload = null;
       }
       if (request.status < 200 || request.status >= 300) {
-        reject(new Error(payload?.error ?? 'The recording could not be uploaded. Try again.'));
+        reject(
+          new Error(
+            payload?.error ?? 'The recording could not be uploaded. Try again.'
+          )
+        );
         return;
       }
       onProgress(1);

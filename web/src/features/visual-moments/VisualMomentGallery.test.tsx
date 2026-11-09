@@ -16,7 +16,7 @@ const unlinked: VisualMoment = { ...linked, id: 'moment-0002', timestampMs: 700_
 const recording: VisualReviewRecording = {
   sourceType: 'upload', status: 'ready', preparationStage: null, mediaKind: 'video', mimeType: 'video/mp4', durationMs: 900_000,
   playbackPositionMs: 720_000, isPlaying: true, analysisWindowMinutes: 5, visualReviewSkippedWindowCount: 1, analysisThroughMs: 600_000,
-  analysisState: 'ready', mediaUrl: '/media'
+  analysisState: 'ready', mediaUrl: '/media', playbackUpdatedAt: '2026-01-01T00:00:00.000Z'
 };
 
 // Render the gallery with spy callbacks standing in for the reader host

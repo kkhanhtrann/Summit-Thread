@@ -14,6 +14,7 @@ export function toRecordingView(sessionId: string, recording: RecordingViewSourc
     mimeType: recording.mimeType,
     durationMs: recording.durationMs,
     playbackPositionMs: recording.playbackPositionMs,
+    playbackUpdatedAt: recording.playbackUpdatedAt,
     isPlaying: recording.isPlaying,
     analysisWindowMinutes: recording.analysisWindowMinutes,
     visualReviewSkippedWindowCount: recording.visualReviewSkippedWindowCount,

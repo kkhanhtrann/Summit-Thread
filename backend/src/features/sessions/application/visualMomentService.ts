@@ -39,6 +39,8 @@ export interface VisualSourceRecord {
   mimeType: string;
   durationMs: number | null;
   playbackPositionMs: number;
+  // Carry the playback owner's clock timestamp through recording events unchanged
+  playbackUpdatedAt: string;
   isPlaying: boolean;
   analysisWindowMinutes: number;
   // Count committed windows; the next window index equals this cursor

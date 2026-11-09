@@ -48,7 +48,7 @@ function fakeService(): VisualMomentRoutesPort & { submissions: Array<{ sessionI
 
 describe('visual moment routes', () => {
   it('serves released still bytes for the owning room without exposing storage paths', async () => {
-    const response = await request(createApp(undefined, { visualMoments: fakeService() })).get('/api/sessions/roomaaaa/visual-moments/moment-0000/image');
+    const response = await request(createApp(undefined, undefined, { visualMoments: fakeService() })).get('/api/sessions/roomaaaa/visual-moments/moment-0000/image');
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toBe('image/jpeg');
     expect(response.headers['cache-control']).toBe('private, max-age=86400');
@@ -56,7 +56,7 @@ describe('visual moment routes', () => {
   });
 
   it('rejects unknown, unreleased, wrong-room, and malformed moment IDs with the same safe response', async () => {
-    const app = createApp(undefined, { visualMoments: fakeService() });
+    const app = createApp(undefined, undefined, { visualMoments: fakeService() });
     for (const path of [
       '/api/sessions/ROOMBBBB/visual-moments/moment-0000/image',
       '/api/sessions/ROOMAAAA/visual-moments/moment-0001/image',
@@ -75,7 +75,7 @@ describe('visual moment routes', () => {
 
   it('accepts completed live clips in order and rejects unsupported or out-of-order submissions', async () => {
     const service = fakeService();
-    const app = createApp(undefined, { visualMoments: service });
+    const app = createApp(undefined, undefined, { visualMoments: service });
     const accepted = await request(app).post('/api/sessions/ROOMAAAA/recording/live/windows/0').set('Content-Type', 'video/webm;codecs=vp9').send(Buffer.from([1, 2, 3]));
     expect(accepted.status).toBe(202);
     expect(service.submissions).toEqual([{ sessionId: 'ROOMAAAA', index: 0, mimeType: 'video/webm' }]);

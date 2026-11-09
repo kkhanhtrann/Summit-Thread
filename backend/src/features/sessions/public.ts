@@ -1,5 +1,7 @@
-export type * from './contracts/session.contract';
-export type * from './contracts/visualMoment.contract';
+export * from './contracts/session.contract';
+export * from './contracts/visualMoment.contract';
+export { RoomService } from './application/roomService';
+export { RecordingService } from './application/recordingService';
 // Expose visual-moment composition for app wiring and the room snapshot owner
 export { VisualMomentService } from './application/visualMomentService';
 export type { VisualEventPort, VisualMomentTelemetryPort } from './application/visualMomentService';

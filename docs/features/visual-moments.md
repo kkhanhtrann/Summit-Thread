@@ -14,7 +14,7 @@ Attendees receive a small number of original stills from the room's video, each 
 - FFmpeg and FFprobe on the backend `PATH`. They extract clips and frames and read live-clip durations.
 - `GEMINI_API_KEY` in `backend/.env` (backend only). Without it, every window fails with `not_configured` and, after bounded attempts, is recorded as skipped. Media, captions and topics keep working.
 - `GEMINI_VISUAL_MODEL` selects the multimodal model (default `gemini-3.8-flash`). The provider is called through Google's GenAI SDK (`@google/genai`).
-- Storage is `<repo>/.data/recordings/<ROOM>/`. It is ignored by git.
+- Storage is `backend/.data/recordings/<ROOM>/`, the same root the upload store uses. It is ignored by git.
 
 ## Window cadence and cost
 
@@ -53,7 +53,7 @@ For uploads, the still is decoded from the original source at the source timesta
 
 | Path under `.data/recordings/<ROOM>/` | Contents | Lifetime |
 | --- | --- | --- |
-| `source.media` | Full uploaded source, written by the media workflow | Room lifetime |
+| `source` | Full uploaded source, written by the upload store | Room lifetime |
 | `visual/clips/` | Temporary provider input clips | Removed after each attempt (uploads) or each submission (live) |
 | `visual/windows/window-NNNN.json` | Pending candidate, attempt count, last failure category, source fingerprint | Room lifetime; the retry and skip cache |
 | `visual/stills/moment-NNNN.jpg` | Original stills | Room lifetime |
@@ -146,7 +146,7 @@ An FFmpeg frame-provenance test decodes a synthetic two-color video. It runs onl
 ## Known limits and verification status
 
 - No real provider run and no check of frame provenance on a consented recording have been done in this repository yet. The FFmpeg provenance test was skipped locally because FFmpeg is not installed.
-- Room creation, upload, playback clock, event hub, snapshots and topic threads come from the media and topic workflows. Until those land, the service is not wired into `server.ts` and the gallery is not mounted in a reader page.
+- Rooms, upload, the playback clock, the event hub and snapshots are now on main, but the service is not yet wired into `server.ts`, playback updates, or snapshots, and the gallery is not mounted in the reader page. Topic threads are still pending.
 - The Prisma repository has no database-backed test yet.
 - Spoken context uses a fixed 60-second lookback. Late-finalized speech may attach on a later snapshot rather than in the release event.
 - Retries within a window happen in-process. A restart mid-window resumes on the next playback update.

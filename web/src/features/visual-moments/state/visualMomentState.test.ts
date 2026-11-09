@@ -12,7 +12,7 @@ const moment = (id: string, timestampMs: number, captionId: string | null = null
 const recording = (overrides: Partial<VisualReviewRecording> = {}): VisualReviewRecording => ({
   sourceType: 'upload', status: 'ready', preparationStage: null, mediaKind: 'video', mimeType: 'video/mp4', durationMs: 600_000,
   playbackPositionMs: 0, isPlaying: true, analysisWindowMinutes: 5, visualReviewSkippedWindowCount: 0, analysisThroughMs: 0,
-  analysisState: 'waiting', mediaUrl: '/media', ...overrides
+  analysisState: 'waiting', mediaUrl: '/media', playbackUpdatedAt: '2026-01-01T00:00:00.000Z', ...overrides
 });
 
 describe('visual moment state', () => {

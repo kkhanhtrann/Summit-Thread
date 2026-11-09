@@ -36,6 +36,7 @@ class MemoryRepository implements VisualMomentRepositoryPort {
       mimeType: 'video/mp4',
       durationMs: 90_000,
       playbackPositionMs: 0,
+      playbackUpdatedAt: '2026-01-01T00:00:00.000Z',
       isPlaying: false,
       analysisWindowMinutes: 1,
       analysisWindowCount: 0,
@@ -123,7 +124,7 @@ class MemoryAssets implements VisualAssetPort {
   frameFailures = 0;
 
   async sourceKey(): Promise<string> { return this.key; }
-  sourcePath(sessionId: string): string { return `/rooms/${sessionId}/source.media`; }
+  sourcePath(sessionId: string): string { return `/rooms/${sessionId}/source`; }
 
   async createClip(sessionId: string, window: AnalysisWindow): Promise<{ path: string; mimeType: string }> {
     if (this.clipFailures > 0) {
@@ -313,7 +314,7 @@ describe('VisualMomentService evidence and release', () => {
     analyzer.respond = async ({ clipPath }) => clipPath.endsWith('window-1.mp4') ? slide(190_000) : { moments: [] };
     await tick(300_000);
     await tick(600_000, false);
-    expect(assets.frames).toEqual([{ sessionId: ROOM, momentId: 'moment-0001', mediaPath: `/rooms/${ROOM}/source.media`, offsetMs: 490_000 }]);
+    expect(assets.frames).toEqual([{ sessionId: ROOM, momentId: 'moment-0001', mediaPath: `/rooms/${ROOM}/source`, offsetMs: 490_000 }]);
     expect(released().map((moment) => [moment.id, moment.timestampMs])).toEqual([['moment-0001', 490_000]]);
     // Provider input is only ever the extracted clip, never the full source
     expect(analyzer.calls.every((call) => call.clipPath.includes('/visual/clips/'))).toBe(true);

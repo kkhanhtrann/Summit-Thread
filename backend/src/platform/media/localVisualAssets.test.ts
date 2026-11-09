@@ -74,8 +74,8 @@ describe('LocalVisualAssetStore', () => {
   it('decodes frames only from media inside the room and rejects unsafe identifiers', async () => {
     const root = await storageRoot();
     const store = new LocalVisualAssetStore(root, recordingRunner().runner);
-    await expect(store.extractFrame(ROOM, 'moment-0000', join(root, 'ROOMBBBB', 'source.media'), 0)).rejects.toThrow('outside room storage');
-    await expect(store.removeClip(ROOM, join(root, ROOM, 'source.media'))).rejects.toThrow('outside room storage');
+    await expect(store.extractFrame(ROOM, 'moment-0000', join(root, 'ROOMBBBB', 'source'), 0)).rejects.toThrow('outside room storage');
+    await expect(store.removeClip(ROOM, join(root, ROOM, 'source'))).rejects.toThrow('outside room storage');
     expect(() => store.sourcePath('../escape')).toThrow('Session ID is invalid');
     await expect(store.getImageFile(ROOM, '../../source')).rejects.toThrow('Visual moment ID is invalid');
   });
