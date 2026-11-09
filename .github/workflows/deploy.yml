@@ -27,11 +27,17 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/summit-thread:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/summit-thread:main
-      - name: Pin the deployed image
+      - name: Prepare deployment pin
         run: |
           sed -i "s/newTag: .*/newTag: $GITHUB_SHA/" deploy/kustomization.yaml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add deploy/kustomization.yaml
-          git commit -m "deploy: $GITHUB_SHA [skip ci]"
-          git push
+      - name: Open deployment pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: deploy/${{ github.sha }}
+          delete-branch: true
+          title: "deploy: ${{ github.sha }}"
+          commit-message: "deploy: ${{ github.sha }}"
+          body: |
+            Update the Radar deployment image to `${{ github.sha }}`.
+
+            The image was published by the Deploy to Radar workflow.

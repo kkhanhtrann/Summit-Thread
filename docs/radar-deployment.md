@@ -25,8 +25,9 @@ participant content.
 ## Release flow
 
 Push to `main`. The workflow builds the image, publishes both the commit SHA and
-`main` tags, and commits the SHA into `deploy/kustomization.yaml`. Argo CD then
-syncs that revision. The application has one replica because uploaded recordings
+`main` tags, and opens a deployment pull request that pins the commit SHA in
+`deploy/kustomization.yaml`. Merge that deployment PR, and Argo CD then syncs
+that revision. The application has one replica because uploaded recordings
 use a pod-local volume, a readiness check backed by
 PostgreSQL and Elasticsearch, and a liveness check that does not require either
 dependency.
