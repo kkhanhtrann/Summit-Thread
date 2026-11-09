@@ -87,9 +87,12 @@ be ready while serving a placeholder, so a pod-ready count alone is insufficient
 On November 9, 2026, replacing the stale Elasticsearch pod allowed the application
 to replace the starter container. Public frontend and backend readiness checks
 then passed. The recovery used the existing public image from commit
-`81d0e9686f407b86aea4e2a4328b08bb92039a05`, now recorded as the baseline image pin.
-The newer `9a93225` image had failed publishing; recovery did not deploy that
-newer application code or verify AI provider calls.
+`81d0e9686f407b86aea4e2a4328b08bb92039a05`.
+After the package administrator confirmed repository Admin access, a workflow
+retry successfully published `9a9322535b38425c0db5eab8ac63c856be3db317`. The app was
+then rolled onto that image, and the baseline pin was advanced to match it.
+The old workflow subsequently stopped at its mandatory `DEPLOY_PR_TOKEN` check;
+this branch removes that requirement. AI provider calls were not verified.
 
 Recordings use an ephemeral pod volume and are not a durable production media
 store. This deployment is a hackathon environment, not an authenticated

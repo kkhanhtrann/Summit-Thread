@@ -8,4 +8,4 @@ resources:
   - app.yaml
 images:
   - name: ghcr.io/kkhanhtrann/summit-thread
-    newTag: 81d0e9686f407b86aea4e2a4328b08bb92039a05
+    newTag: 9a9322535b38425c0db5eab8ac63c856be3db317
