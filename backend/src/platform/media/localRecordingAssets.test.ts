@@ -13,6 +13,27 @@ async function* bytes(...chunks: Uint8Array[]) {
   yield* chunks;
 }
 describe('private upload storage', () => {
+  it('keeps storage importable when the optional validator package is missing', async () => {
+    vi.doMock('@ffprobe-installer/ffprobe', () => {
+      throw Object.assign(new Error('SYNTHETIC_MISSING_BINARY_PACKAGE'), {
+        code: 'MODULE_NOT_FOUND'
+      });
+    });
+    vi.resetModules();
+    try {
+      const adapter = await import('./localRecordingAssets.js');
+      expect(adapter.LocalRecordingAssetStore).toBeTypeOf('function');
+      await expect(
+        adapter.readRecordingDuration('synthetic.wav', 'audio')
+      ).rejects.toMatchObject({
+        name: 'Error',
+        message: 'Recording validation is unavailable'
+      });
+    } finally {
+      vi.doUnmock('@ffprobe-installer/ffprobe');
+      vi.resetModules();
+    }
+  });
   it('reports an unavailable validator separately from an invalid recording', async () => {
     const originalPath = ffprobe.path;
     ffprobe.path = join(tmpdir(), 'st02-missing-validator', 'ffprobe');

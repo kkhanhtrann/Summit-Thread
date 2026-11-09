@@ -5,7 +5,6 @@ import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import ffprobe from '@ffprobe-installer/ffprobe';
 import { RecordingTooLargeError } from '../../features/sessions/public';
 
 // Limit recordings to 300 MiB even when the browser omits Content-Length
@@ -66,9 +65,16 @@ export async function readRecordingDuration(
   path: string,
   kind: 'audio' | 'video'
 ): Promise<number> {
+  let validatorPath: string;
+  // Keep rooms and playback available when an optional platform binary is missing
+  try {
+    validatorPath = (await import('@ffprobe-installer/ffprobe')).default.path;
+  } catch {
+    throw new Error('Recording validation is unavailable');
+  }
   try {
     const { stdout } = await promisify(execFile)(
-      ffprobe.path,
+      validatorPath,
       [
         '-v',
         'error',
